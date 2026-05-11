@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DINK Republic Open Play</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a1628; color: #e8f0fe; min-height: 100vh; }
+  :root {
+    --green: #00c853; --green-dim: #1a3a2a; --green-mid: #00963e;
+    --gold: #ffd600; --gold-dim: #2a2200;
+    --blue: #2196f3; --blue-dim: #0d2040;
+    --red: #f44336; --red-dim: #2a0d0d;
+    --orange: #ff9800; --orange-dim: #2a1800;
+    --purple: #9c27b0; --purple-dim: #1a0a2a;
+    --teal: #00bcd4; --teal-dim: #0a2228;
+    --surface: #112240; --surface2: #172a4a; --surface3: #1e3560;
+    --border: #2a4070; --text-muted: #7a9cc4; --text-dim: #4a6a94;
+    --r: 8px;
+  }
+  .app { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .header { text-align: center; margin-bottom: 20px; padding: 20px 0 10px; }
+  .header h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; color: var(--green); text-transform: uppercase; }
+  .header p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+  .btn { border: none; border-radius: var(--r); padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-gold { background: var(--gold); color: #000; }
+  .btn-ghost { background: var(--surface3); color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-beg { background: var(--green-dim); color: var(--green); }
+  .badge-li { background: var(--blue-dim); color: var(--blue); }
+  .badge-hi { background: var(--orange-dim); color: var(--orange); }
+  .badge-adv { background: var(--purple-dim); color: #ce93d8; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; text-align: center; }
+  .stat-card .val { font-size: 32px; font-weight: 800; line-height: 1; }
+  .stat-card .lbl { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .courts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .court-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+  .court-card.active { border-color: var(--green); }
+  .court-card.open { border-color: var(--text-dim); border-style: dashed; }
+  .court-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .court-name { font-weight: 700; font-size: 14px; }
+  .court-timer { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .timer-warn { color: var(--orange); }
+  .timer-ok { color: var(--green); }
+  .timer-over { color: var(--red); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .player-slot { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; margin-bottom: 4px; background: var(--surface3); }
+  .player-slot.empty { border: 1px dashed var(--border); background: transparent; color: var(--text-dim); font-size: 12px; justify-content: center; }
+  .player-name { font-size: 13px; font-weight: 600; flex: 1; }
+  .team-divider { text-align: center; font-size: 10px; color: var(--text-dim); margin: 4px 0; font-weight: 700; letter-spacing: 1px; }
+  .queue-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .queue-item { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+  .queue-num { font-size: 11px; color: var(--text-dim); font-weight: 700; min-width: 20px; }
+  .queue-name { flex: 1; font-size: 13px; font-weight: 600; }
+  .add-player-form { display: flex; flex-direction: column; gap: 8px; }
+  input, select { background: var(--surface3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; color: #e8f0fe; outline: none; width: 100%; }
+  input:focus, select:focus { border-color: var(--blue); }
+  select option { background: #172a4a; }
+  .controls-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; margin-bottom: 16px; }
+  .ctrl-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ctrl-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .mode-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .mode-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .time-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .time-btn.active { background: var(--gold); border-color: var(--gold); color: #000; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .history-table th { text-align: left; padding: 8px 8px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+  .history-table td { padding: 8px 8px; border-bottom: 1px solid var(--surface3); vertical-align: middle; }
+  .history-table tr:hover td { background: var(--surface2); }
+  .score-display { font-weight: 700; font-size: 15px; }
+  .win { color: var(--green); }
+  .lose { color: #f88; }
+  .player-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .player-stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+  .ps-name { font-weight: 700; font-size: 13px; }
+  .ps-row { display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px; color: var(--text-muted); }
+  .ps-val { color: #e8f0fe; font-weight: 600; }
+  .score-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .score-modal-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 360px; }
+  .score-modal-inner h2 { font-size: 20px; margin-bottom: 6px; }
+  .score-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .score-team { text-align: center; }
+  .score-team label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+  .score-team input { text-align: center; font-size: 32px; font-weight: 800; padding: 12px; }
+  .modal-btns { display: flex; gap: 8px; }
+  .tabbar { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 14px; overflow-x: auto; }
+  .tab { padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+  .empty-state { text-align: center; padding: 32px; color: var(--text-dim); font-size: 13px; }
+  .divider-v { width: 1px; height: 24px; background: var(--border); }
+  .court-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-gray { background: var(--text-dim); }
+  .player-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 160px; overflow-y: auto; margin-bottom: 8px; }
+  .player-select-item { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .player-select-item:hover { border-color: var(--blue); }
+  .player-select-item.selected { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .notification { position: fixed; top: 20px; right: 20px; background: var(--surface); border: 1px solid var(--green); border-radius: var(--r); padding: 14px 18px; font-size: 13px; font-weight: 600; color: var(--green); z-index: 200; animation: slideIn 0.3s ease; max-width: 300px; box-shadow: 0 4px 20px rgba(0,200,83,0.2); }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  .two-col { display: grid; grid-template-columns: 1fr 300px; gap: 12px; }
+  @media (max-width: 700px) {
+    .stat-grid { grid-template-columns: repeat(2,1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .controls-bar { flex-direction: column; align-items: flex-start; }
+  }
+  .win-rate-bar { height: 4px; background: var(--surface3); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  .win-rate-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.4s; }
+  .level-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .court-action-row { display: flex; gap: 6px; margin-top: 8px; }
+  .partner-tag { display: inline-flex; align-items: center; gap: 3px; background: var(--purple-dim); color: #ce93d8; border: 1px solid #9c27b055; border-radius: 20px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+  .partner-pair-row { display: flex; gap: 6px; align-items: center; background: var(--purple-dim); border: 1px solid #9c27b044; border-radius: 6px; padding: 5px 8px; margin-bottom: 4px; }
+  .pair-divider { font-size: 9px; color: #ce93d8; font-weight: 800; letter-spacing: 1px; }
+  .session-bar { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 14px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .session-info { display: flex; align-items: center; gap: 10px; }
+  .session-name { font-size: 13px; font-weight: 700; color: #e8f0fe; }
+  .session-meta { font-size: 11px; color: var(--text-muted); }
+  .session-actions { display: flex; gap: 6px; }
+  .session-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; }
+  .session-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 380px; max-width: 95vw; }
+  .session-modal h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .session-modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+  .saved-sessions-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; }
+  .saved-session-item { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: all 0.15s; }
+  .saved-session-item:hover { border-color: var(--blue); background: var(--blue-dim); }
+  .ssi-name { font-weight: 700; font-size: 13px; flex: 1; }
+  .ssi-meta { font-size: 11px; color: var(--text-muted); }
+  .btn-teal { background: var(--teal); color: #000; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const LEVELS = ['Beginner', 'Low-Int', 'High-Int', 'Advanced'];
+const LEVEL_SHORT = { 'Beginner': 'BEG', 'Low-Int': 'L-INT', 'High-Int': 'H-INT', 'Advanced': 'ADV' };
+const LEVEL_IDX = { 'Beginner': 0, 'Low-Int': 1, 'High-Int': 2, 'Advanced': 3 };
+const BADGE_CLASS = { 'Beginner': 'badge-beg', 'Low-Int': 'badge-li', 'High-Int': 'badge-hi', 'Advanced': 'badge-adv' };
+const TIME_OPTIONS = [15, 20, 24, 30];
+const MATCH_MODES = ['Same Level', 'Consecutive', 'Mixed', 'Manual'];
+
+let nextId = 200;
+const uid = () => `p${nextId++}`;
+
+const INIT_PLAYERS = [
+  { id: uid(), name: 'Alex', level: 'Beginner', partnerId: null },
+  { id: uid(), name: 'Sam', level: 'Beginner', partnerId: null },
+  { id: uid(), name: 'Jordan', level: 'Low-Int', partnerId: null },
+  { id: uid(), name: 'Casey', level: 'Low-Int', partnerId: null },
+  { id: uid(), name: 'Riley', level: 'High-Int', partnerId: null },
+  { id: uid(), name: 'Morgan', level: 'High-Int', partnerId: null },
+  { id: uid(), name: 'Taylor', level: 'Advanced', partnerId: null },
+  { id: uid(), name: 'Drew', level: 'Advanced', partnerId: null },
+  { id: uid(), name: 'Jamie', level: 'Beginner', partnerId: null },
+  { id: uid(), name: 'Quinn', level: 'Low-Int', partnerId: null },
+];
+
+function LevelBadge({ level }) {
+  return <span className={`badge ${BADGE_CLASS[level] || 'badge-beg'}`}>{LEVEL_SHORT[level] || level}</span>;
+}
+
+function CourtTimer({ startTime, limitMin }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [startTime]);
+  const limit = limitMin * 60;
+  const rem = limit - elapsed;
+  const absRem = Math.abs(rem);
+  const min = Math.floor(absRem / 60).toString().padStart(2, '0');
+  const sec = (absRem % 60).toString().padStart(2, '0');
+  const cls = rem < 0 ? 'timer-over' : rem < 120 ? 'timer-warn' : 'timer-ok';
+  return <span className={`court-timer ${cls}`}>{rem < 0 ? '-' : ''}{min}:{sec}</span>;
+}
+
+function App() {
+  const [numCourts, setNumCourts] = useState(3);
+  const [gameTime, setGameTime] = useState(20);
+  const [matchMode, setMatchMode] = useState('Same Level');
+  const [queue, setQueue] = useState(INIT_PLAYERS);
+  const [courts, setCourts] = useState(
+    Array.from({ length: 3 }, (_, i) => ({ id: i + 1, players: null, startTime: null }))
+  );
+  const [history, setHistory] = useState([]);
+  const [newName, setNewName] = useState('');
+  const [newLevel, setNewLevel] = useState('Beginner');
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [newPartnerLevel, setNewPartnerLevel] = useState('Beginner');
+  const [addingPair, setAddingPair] = useState(false);
+  const [scoreModal, setScoreModal] = useState(null);
+  const [scoreA, setScoreA] = useState('');
+  const [scoreB, setScoreB] = useState('');
+  const [modalTeamA, setModalTeamA] = useState([]);
+  const [modalTeamB, setModalTeamB] = useState([]);
+  const [notification, setNotification] = useState(null);
+  const [activeTab, setActiveTab] = useState('courts');
+  const [manualSelected, setManualSelected] = useState([]);
+  const [manualCourt, setManualCourt] = useState(null);
+  const notifTimer = useRef(null);
+
+  // ── Session management ──────────────────────────────────────────────
+  const [sessionName, setSessionName] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dr_current_session_name')) || 'Session 1'; } catch { return 'Session 1'; }
+  });
+  const [sessionStarted, setSessionStarted] = useState(() => {
+    try { return localStorage.getItem('dr_session_started') || new Date().toISOString(); } catch { return new Date().toISOString(); }
+  });
+  const [sessionModal, setSessionModal] = useState(null); // null | 'save' | 'new' | 'load'
+  const [savedSessions, setSavedSessions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dr_saved_sessions')) || []; } catch { return []; }
+  });
+  const [newSessionName, setNewSessionName] = useState('');
+  const [lastSaved, setLastSaved] = useState(null);
+
+  const buildSnapshot = () => ({
+    name: sessionName,
+    savedAt: new Date().toISOString(),
+    startedAt: sessionStarted,
+    numCourts, gameTime, matchMode,
+    queue, history,
+    courts: courts.map(c => ({ ...c, startTime: c.startTime ? c.startTime : null })),
+  });
+
+  const saveSession = (nameOverride) => {
+    const snap = { ...buildSnapshot(), name: nameOverride || sessionName };
+    const updated = savedSessions.filter(s => s.name !== snap.name).concat(snap);
+    setSavedSessions(updated);
+    localStorage.setItem('dr_saved_sessions', JSON.stringify(updated));
+    localStorage.setItem('dr_current_session_name', JSON.stringify(snap.name));
+    localStorage.setItem('dr_session_started', sessionStarted);
+    setLastSaved(new Date());
+    showNotif(`Session "${snap.name}" saved!`);
+    setSessionModal(null);
+  };
+
+  const loadSession = (snap) => {
+    setSessionName(snap.name);
+    setSessionStarted(snap.startedAt);
+    setNumCourts(snap.numCourts);
+    setGameTime(snap.gameTime);
+    setMatchMode(snap.matchMode);
+    setQueue(snap.queue || []);
+    setHistory(snap.history || []);
+    setCourts(snap.courts || Array.from({ length: snap.numCourts }, (_, i) => ({ id: i+1, players: null, startTime: null })));
+    localStorage.setItem('dr_current_session_name', JSON.stringify(snap.name));
+    localStorage.setItem('dr_session_started', snap.startedAt);
+    showNotif(`Loaded "${snap.name}"!`);
+    setSessionModal(null);
+    setActiveTab('courts');
+  };
+
+  const startNewSession = (name) => {
+    const n = name.trim() || `Session ${savedSessions.length + 2}`;
+    setSessionName(n);
+    const now = new Date().toISOString();
+    setSessionStarted(now);
+    setQueue([]);
+    setHistory([]);
+    setCourts(Array.from({ length: numCourts }, (_, i) => ({ id: i+1, players: null, startTime: null })));
+    setManualCourt(null); setManualSelected([]);
+    setScoreModal(null);
+    localStorage.setItem('dr_current_session_name', JSON.stringify(n));
+    localStorage.setItem('dr_session_started', now);
+    setLastSaved(null);
+    showNotif(`New session "${n}" started!`);
+    setSessionModal(null);
+    setActiveTab('courts');
+  };
+
+  const deleteSession = (name, e) => {
+    e.stopPropagation();
+    const updated = savedSessions.filter(s => s.name !== name);
+    setSavedSessions(updated);
+    localStorage.setItem('dr_saved_sessions', JSON.stringify(updated));
+    showNotif(`Session "${name}" deleted`);
+  };
+  // ───────────────────────────────────────────────────────────────────
+
+  const showNotif = (msg) => {
+    setNotification(msg);
+    if (notifTimer.current) clearTimeout(notifTimer.current);
+    notifTimer.current = setTimeout(() => setNotification(null), 3000);
+  };
+
+  const updateCourts = (n) => {
+    setNumCourts(n);
+    setCourts(prev => {
+      if (n > prev.length) {
+        return [...prev, ...Array.from({ length: n - prev.length }, (_, i) => ({
+          id: prev.length + i + 1, players: null, startTime: null
+        }))];
+      }
+      return prev.slice(0, n);
+    });
+  };
+
+  const teamCompatible = (tA, tB, mode) => {
+    if (mode === 'Mixed' || mode === 'Manual') return true;
+    const all = [...tA, ...tB];
+    const levels = all.map(p => LEVEL_IDX[p.level]);
+    const span = Math.max(...levels) - Math.min(...levels);
+    if (mode === 'Same Level') return span === 0;
+    if (mode === 'Consecutive') return span <= 1;
+    return true;
+  };
+
+  // Returns true if a 4-player group respects fixed-partner constraints.
+  // Mixed mode: no partner restrictions — any 4 players can share a court.
+  const partnersRespected = (tA, tB, mode) => {
+    if (mode === 'Mixed') return true;
+    const allFour = [...tA, ...tB];
+    for (const p of allFour) {
+      if (!p.partnerId) continue;
+      const partnerInGroup = allFour.find(x => x.id === p.partnerId);
+      if (!partnerInGroup) return false; // partner not in this match
+      // They must be on the SAME team
+      const pInA = tA.find(x => x.id === p.id);
+      const partnerInA = tA.find(x => x.id === p.partnerId);
+      if (!!pInA !== !!partnerInA) return false; // one in A, one in B
+    }
+    return true;
+  };
+
+  // Fisher-Yates shuffle
+  const shuffle = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const findMatch = (q, mode) => {
+    if (mode === 'Manual') return null;
+    // Shuffle a copy so every auto-assign picks random players each time
+    const rq = shuffle(q);
+    for (let i = 0; i < rq.length - 3; i++)
+    for (let j = i+1; j < rq.length - 2; j++)
+    for (let k = j+1; k < rq.length - 1; k++)
+    for (let l = k+1; l < rq.length; l++) {
+      const players = [rq[i], rq[j], rq[k], rq[l]];
+      // Also randomise which team split is tried first
+      const combos = shuffle([[0,1,2,3],[0,2,1,3],[0,3,1,2]]);
+      for (const [a,b,c,d] of combos) {
+        const tA = [players[a], players[b]], tB = [players[c], players[d]];
+        if (teamCompatible(tA, tB, mode) && partnersRespected(tA, tB, mode)) {
+          return { teamA: tA, teamB: tB, ids: players.map(p => p.id) };
+        }
+      }
+    }
+    return null;
+  };
+
+  const autoAssign = () => {
+    if (matchMode === 'Manual') { showNotif('Switch to Auto mode or use Assign Manually on a court'); return; }
+    const open = courts.find(c => !c.players);
+    if (!open) { showNotif('No open courts available'); return; }
+    if (queue.length < 4) { showNotif('Need at least 4 players in queue'); return; }
+    const match = findMatch(queue, matchMode);
+    if (!match) { showNotif(`No valid match found for "${matchMode}" mode`); return; }
+    const { teamA, teamB, ids } = match;
+    setCourts(prev => prev.map(c => c.id === open.id ? { ...c, players: { teamA, teamB }, startTime: Date.now() } : c));
+    setQueue(prev => prev.filter(p => !ids.includes(p.id)));
+    showNotif(`Court ${open.id} — Game started!`);
+  };
+
+  const startManual = (courtId) => { setManualCourt(courtId); setManualSelected([]); };
+
+  const toggleManualPlayer = (p) => {
+    setManualSelected(prev =>
+      prev.find(x => x.id === p.id)
+        ? prev.filter(x => x.id !== p.id)
+        : prev.length < 4 ? [...prev, p] : prev
+    );
+  };
+
+  const confirmManual = () => {
+    if (manualSelected.length !== 4) { showNotif('Select exactly 4 players'); return; }
+    const [p1, p2, p3, p4] = manualSelected;
+    const ids = manualSelected.map(p => p.id);
+    setCourts(prev => prev.map(c => c.id === manualCourt
+      ? { ...c, players: { teamA: [p1,p2], teamB: [p3,p4] }, startTime: Date.now() } : c));
+    setQueue(prev => prev.filter(p => !ids.includes(p.id)));
+    setManualCourt(null); setManualSelected([]);
+    showNotif(`Court ${manualCourt} started (manual)!`);
+  };
+
+  const endGame = (courtId) => {
+    const court = courts.find(c => c.id === courtId);
+    if (!court?.players) return;
+    setScoreModal({ courtId, players: court.players, startTime: court.startTime });
+    setModalTeamA([...court.players.teamA]);
+    setModalTeamB([...court.players.teamB]);
+    setScoreA(''); setScoreB('');
+  };
+
+  const submitScore = () => {
+    if (!scoreModal) return;
+    const sA = parseInt(scoreA) || 0, sB = parseInt(scoreB) || 0;
+    const { courtId, startTime } = scoreModal;
+    const duration = startTime ? Math.floor((Date.now() - startTime) / 60000) : 0;
+    const winner = sA > sB ? 'A' : sB > sA ? 'B' : 'tie';
+    setHistory(prev => [...prev, {
+      id: Date.now(), courtId, teamA: modalTeamA, teamB: modalTeamB,
+      scoreA: sA, scoreB: sB, winner, duration,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setQueue(prev => [...prev, ...modalTeamA, ...modalTeamB]);
+    setCourts(prev => prev.map(c => c.id === courtId ? { ...c, players: null, startTime: null } : c));
+    setScoreModal(null);
+    showNotif(`Court ${courtId} — Game recorded!`);
+  };
+
+  const addPlayer = () => {
+    if (!newName.trim()) return;
+    if (addingPair) {
+      if (!newPartnerName.trim()) { showNotif('Enter partner name too'); return; }
+      const id1 = uid(), id2 = uid();
+      const p1 = { id: id1, name: newName.trim(), level: newLevel, partnerId: id2 };
+      const p2 = { id: id2, name: newPartnerName.trim(), level: newPartnerLevel, partnerId: id1 };
+      setQueue(prev => [...prev, p1, p2]);
+      setNewName(''); setNewPartnerName('');
+      showNotif(`${p1.name} & ${p2.name} added as a fixed pair!`);
+    } else {
+      const p = { id: uid(), name: newName.trim(), level: newLevel, partnerId: null };
+      setQueue(prev => [...prev, p]);
+      setNewName('');
+      showNotif(`${p.name} added to waitlist!`);
+    }
+  };
+
+  // Unlink a fixed pair (e.g. if one is removed)
+  const removeFromQueue = (id) => {
+    setQueue(prev => {
+      const target = prev.find(p => p.id === id);
+      // If they had a partner, unlink the partner too
+      if (target?.partnerId) {
+        return prev
+          .filter(p => p.id !== id)
+          .map(p => p.id === target.partnerId ? { ...p, partnerId: null } : p);
+      }
+      return prev.filter(p => p.id !== id);
+    });
+  };
+
+  // Stats
+  const activeCourts = courts.filter(c => c.players).length;
+  const openCourts = courts.filter(c => !c.players).length;
+  const onCourtCount = activeCourts * 4;
+
+  const playerStats = {};
+  history.forEach(g => {
+    const all = [...g.teamA.map(p => ({...p, team:'A'})), ...g.teamB.map(p => ({...p, team:'B'}))];
+    all.forEach(({ id, name, level, team }) => {
+      if (!playerStats[id]) playerStats[id] = { name, level, games: 0, wins: 0, pts: 0, against: 0 };
+      playerStats[id].games++;
+      const won = (team==='A' && g.winner==='A') || (team==='B' && g.winner==='B');
+      if (won) playerStats[id].wins++;
+      playerStats[id].pts += team === 'A' ? g.scoreA : g.scoreB;
+      playerStats[id].against += team === 'A' ? g.scoreB : g.scoreA;
+    });
+  });
+
+  const exportHistoryCSV = () => {
+    const headers = ['#','Time','Court','Team A Players','Team A Levels','Score A','Score B','Team B Players','Team B Levels','Winner','Duration (min)'];
+    const rows = [...history].reverse().map((g, i) => [
+      history.length - i,
+      g.time,
+      `Court ${g.courtId}`,
+      g.teamA.map(p => p.name).join(' & '),
+      g.teamA.map(p => p.level).join(' & '),
+      g.scoreA,
+      g.scoreB,
+      g.teamB.map(p => p.name).join(' & '),
+      g.teamB.map(p => p.level).join(' & '),
+      g.winner === 'tie' ? 'Tie' : `Team ${g.winner}`,
+      g.duration
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `dink_republic_history_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    showNotif('History exported to CSV!');
+  };
+
+  const exportStatsCSV = () => {
+    const headers = ['Rank','Player','Level','Games','Wins','Losses','Win %','Points For','Points Against','Diff'];
+    const rows = Object.entries(playerStats)
+      .sort((a,b) => b[1].wins - a[1].wins || b[1].games - a[1].games)
+      .map(([, s], i) => {
+        const losses = s.games - s.wins;
+        const winPct = s.games ? Math.round(s.wins / s.games * 100) : 0;
+        const diff = s.pts - s.against;
+        return [i+1, s.name, s.level, s.games, s.wins, losses, `${winPct}%`, s.pts, s.against, diff >= 0 ? `+${diff}` : diff];
+      });
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `dink_republic_stats_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    showNotif('Player stats exported to CSV!');
+  };
+
+  return (
+    <div className="app">
+      {notification && <div className="notification">✓ {notification}</div>}
+
+      <div className="header">
+        <h1>🏓 DINK Republic Open Play</h1>
+        <p>Court Manager · Doubles Open Play System</p>
+      </div>
+
+      {/* SESSION BAR */}
+      <div className="session-bar">
+        <div className="session-info">
+          <span style={{fontSize:16}}>📋</span>
+          <div>
+            <div className="session-name">{sessionName}</div>
+            <div className="session-meta">
+              Started {new Date(sessionStarted).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+              {lastSaved && <> · Saved {lastSaved.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</>}
+            </div>
+          </div>
+        </div>
+        <div className="session-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => setSessionModal('load')} title="Load a saved session">📂 Load</button>
+          <button className="btn btn-teal btn-sm" onClick={() => saveSession()} title="Save current session">💾 Save</button>
+          <button className="btn btn-gold btn-sm" onClick={() => { setNewSessionName(''); setSessionModal('new'); }} title="Start a fresh session">＋ New Session</button>
+        </div>
+      </div>
+
+      {/* SUMMARY STATS */}
+      <div className="stat-grid">
+        <div className="stat-card">
+          <div className="val" style={{color:'var(--gold)'}}>{queue.length}</div>
+          <div className="lbl">In Queue</div>
+        </div>
+        <div className="stat-card">
+          <div className="val" style={{color:'var(--green)'}}>{onCourtCount}</div>
+          <div className="lbl">On Court</div>
+        </div>
+        <div className="stat-card">
+          <div className="val" style={{color:'var(--blue)'}}>{openCourts}</div>
+          <div className="lbl">Open Courts</div>
+        </div>
+        <div className="stat-card">
+          <div className="val" style={{color:'var(--teal)'}}>{history.length}</div>
+          <div className="lbl">Games Done</div>
+        </div>
+      </div>
+
+      {/* CONTROLS */}
+      <div className="controls-bar">
+        <div className="ctrl-group">
+          <span className="ctrl-label">Courts</span>
+          {[1,2,3,4,5,6,7].map(n => (
+            <button key={n} className={`time-btn ${numCourts===n?'active':''}`} onClick={() => updateCourts(n)}>{n}</button>
+          ))}
+        </div>
+        <div className="divider-v" />
+        <div className="ctrl-group">
+          <span className="ctrl-label">Time Limit</span>
+          {TIME_OPTIONS.map(t => (
+            <button key={t} className={`time-btn ${gameTime===t?'active':''}`} onClick={() => setGameTime(t)}>{t}m</button>
+          ))}
+        </div>
+        <div className="divider-v" />
+        <div className="ctrl-group">
+          <span className="ctrl-label">Match Mode</span>
+          {MATCH_MODES.map(m => (
+            <button key={m} className={`mode-btn ${matchMode===m?'active':''}`} onClick={() => setMatchMode(m)}>{m}</button>
+          ))}
+        </div>
+        <button className="btn btn-green btn-sm" style={{marginLeft:'auto'}} onClick={autoAssign}>▶ Auto Assign</button>
+      </div>
+
+      {/* TABS */}
+      <div className="tabbar">
+        {[
+          ['courts', `Courts (${numCourts})`],
+          ['queue', `Waitlist (${queue.length})`],
+          ['history', `History (${history.length})`],
+          ['stats', 'Player Stats'],
+        ].map(([key, label]) => (
+          <div key={key} className={`tab ${activeTab===key?'active':''}`} onClick={() => setActiveTab(key)}>{label}</div>
+        ))}
+      </div>
+
+      {/* COURTS TAB */}
+      {activeTab === 'courts' && (
+        <div className="courts-grid">
+          {courts.map(court => (
+            <div key={court.id} className={`court-card ${court.players ? 'active' : 'open'}`}>
+              <div className="court-header">
+                <span className="court-name">
+                  <span className={`court-status-dot ${court.players?'dot-green':'dot-gray'}`}></span>
+                  Court {court.id}
+                </span>
+                {court.players
+                  ? <CourtTimer startTime={court.startTime} limitMin={gameTime} />
+                  : <span style={{fontSize:11,color:'var(--text-dim)'}}>OPEN</span>
+                }
+              </div>
+
+              {court.players ? (
+                <>
+                  <div className="team-divider">— TEAM A —</div>
+                  {court.players.teamA.map(p => (
+                    <div key={p.id} className="player-slot">
+                      <LevelBadge level={p.level} />
+                      <span className="player-name">{p.name}</span>
+                      {p.partnerId && court.players.teamA.find(x => x.id === p.partnerId) && (
+                        <span style={{fontSize:9,color:'#ce93d8'}}>🔗</span>
+                      )}
+                    </div>
+                  ))}
+                  <div className="team-divider">— VS —</div>
+                  {court.players.teamB.map(p => (
+                    <div key={p.id} className="player-slot">
+                      <LevelBadge level={p.level} />
+                      <span className="player-name">{p.name}</span>
+                      {p.partnerId && court.players.teamB.find(x => x.id === p.partnerId) && (
+                        <span style={{fontSize:9,color:'#ce93d8'}}>🔗</span>
+                      )}
+                    </div>
+                  ))}
+                  <div className="court-action-row">
+                    <button className="btn btn-red btn-sm" style={{flex:1}} onClick={() => endGame(court.id)}>End & Score</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {[0,1,2,3].map(i => <div key={i} className="player-slot empty">open slot</div>)}
+                  {matchMode === 'Manual' && queue.length >= 4 && (
+                    manualCourt === court.id ? (
+                      <div style={{marginTop:8}}>
+                        <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:6}}>
+                          Pick 4 players ({manualSelected.length}/4) — first 2 = Team A, last 2 = Team B
+                        </div>
+                        <div className="player-select-grid">
+                          {queue.map(p => (
+                            <div key={p.id}
+                              className={`player-select-item ${manualSelected.find(x=>x.id===p.id)?'selected':''}`}
+                              onClick={() => toggleManualPlayer(p)}>
+                              <LevelBadge level={p.level} /> {p.name}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{display:'flex',gap:6}}>
+                          <button className="btn btn-green btn-sm" style={{flex:1}} onClick={confirmManual}>Start Game</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setManualCourt(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="btn btn-blue btn-sm" style={{width:'100%',marginTop:8}} onClick={() => startManual(court.id)}>
+                        Assign Manually
+                      </button>
+                    )
+                  )}
+                  {matchMode !== 'Manual' && queue.length >= 4 && (
+                    <button className="btn btn-ghost btn-sm" style={{width:'100%',marginTop:8}} onClick={autoAssign}>
+                      Auto-fill This Court
+                    </button>
+                  )}
+                  {queue.length < 4 && (
+                    <div style={{fontSize:11,color:'var(--text-dim)',textAlign:'center',marginTop:8}}>Need 4+ in queue</div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* QUEUE TAB */}
+      {activeTab === 'queue' && (
+        <div className="two-col">
+          <div className="card">
+            <div className="section-title">Waitlist — {queue.length} players</div>
+            {queue.length === 0
+              ? <div className="empty-state">No players in queue. Add some below!</div>
+              : (
+                <div className="queue-list">
+                  {queue.map((p, i) => {
+                    const partner = p.partnerId ? queue.find(x => x.id === p.partnerId) : null;
+                    return (
+                      <div key={p.id} className="queue-item">
+                        <span className="queue-num">#{i+1}</span>
+                        <LevelBadge level={p.level} />
+                        <span className="queue-name">{p.name}</span>
+                        {partner && (
+                          <span className="partner-tag">🔗 {partner.name}</span>
+                        )}
+                        <button className="btn btn-ghost btn-sm" onClick={() => removeFromQueue(p.id)}>✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            }
+          </div>
+          <div>
+            <div className="card" style={{marginBottom:12}}>
+              <div className="section-title">Add Player</div>
+              <div className="add-player-form">
+                {/* Toggle: solo vs fixed pair */}
+                <div style={{display:'flex',gap:6,marginBottom:4}}>
+                  <button
+                    className={`mode-btn ${!addingPair?'active':''}`}
+                    onClick={() => setAddingPair(false)}
+                    style={{flex:1,borderRadius:6}}>
+                    Solo Player
+                  </button>
+                  <button
+                    className={`mode-btn ${addingPair?'active':''}`}
+                    style={{flex:1,background:addingPair?'var(--purple)':'transparent',borderColor:addingPair?'var(--purple)':'var(--border)',color:addingPair?'#fff':'var(--text-muted)',borderRadius:6}}
+                    onClick={() => setAddingPair(true)}>
+                    🔗 Fixed Pair
+                  </button>
+                </div>
+
+                {/* Player 1 */}
+                <div style={{background:'var(--surface2)',borderRadius:6,padding:'8px',border:'1px solid var(--border)'}}>
+                  <div style={{fontSize:10,color:'var(--text-muted)',fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{addingPair ? 'Player 1' : 'Player'}</div>
+                  <input placeholder="Name" value={newName} onChange={e => setNewName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addPlayer()} style={{marginBottom:6}} />
+                  <select value={newLevel} onChange={e => setNewLevel(e.target.value)}>
+                    {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+
+                {/* Player 2 (only when adding pair) */}
+                {addingPair && (
+                  <div style={{background:'var(--purple-dim)',borderRadius:6,padding:'8px',border:'1px solid #9c27b055'}}>
+                    <div style={{fontSize:10,color:'#ce93d8',fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>🔗 Partner (Player 2)</div>
+                    <input placeholder="Partner name" value={newPartnerName} onChange={e => setNewPartnerName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addPlayer()} style={{marginBottom:6,borderColor:'#9c27b055'}} />
+                    <select value={newPartnerLevel} onChange={e => setNewPartnerLevel(e.target.value)} style={{borderColor:'#9c27b055'}}>
+                      {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                    <div style={{fontSize:10,color:'#ce93d8',marginTop:6,lineHeight:1.5}}>
+                      Fixed partners will always be placed on the same team.
+                    </div>
+                  </div>
+                )}
+
+                <button className="btn btn-green" onClick={addPlayer}>
+                  {addingPair ? '🔗 Add Fixed Pair' : 'Add to Queue'}
+                </button>
+              </div>
+            </div>
+            <div className="card">
+              <div className="section-title">Skill Level Guide</div>
+              <div className="level-legend">
+                {LEVELS.map(l => <span key={l}><LevelBadge level={l} /></span>)}
+              </div>
+              <div style={{marginTop:10,fontSize:12,color:'var(--text-muted)',lineHeight:1.8}}>
+                <div><strong style={{color:'var(--green)'}}>Beginner</strong> — Just learning</div>
+                <div><strong style={{color:'var(--blue)'}}>Low-Int</strong> — Know basics, working on consistency</div>
+                <div><strong style={{color:'var(--orange)'}}>High-Int</strong> — Solid fundamentals, strategic play</div>
+                <div><strong style={{color:'#ce93d8'}}>Advanced</strong> — Competitive, tournament-ready</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY TAB */}
+      {activeTab === 'history' && (
+        <div className="card">
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+            <div className="section-title" style={{marginBottom:0}}>Game History</div>
+            {history.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={exportHistoryCSV}
+                style={{display:'flex',alignItems:'center',gap:5,border:'1px solid var(--green)',color:'var(--green)'}}>
+                ⬇ Export CSV
+              </button>
+            )}
+          </div>
+          {history.length === 0
+            ? <div className="empty-state">No games completed yet. End a game to record the score!</div>
+            : (
+              <div style={{overflowX:'auto'}}>
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Time</th>
+                      <th>Court</th>
+                      <th>Team A</th>
+                      <th>Score</th>
+                      <th>Team B</th>
+                      <th>Winner</th>
+                      <th>Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...history].reverse().map((g, i) => (
+                      <tr key={g.id}>
+                        <td style={{color:'var(--text-dim)'}}>{history.length - i}</td>
+                        <td style={{color:'var(--text-muted)',fontSize:11}}>{g.time}</td>
+                        <td><strong>Court {g.courtId}</strong></td>
+                        <td>
+                          {g.teamA.map(p => (
+                            <div key={p.id} style={{display:'flex',gap:4,alignItems:'center',marginBottom:2}}>
+                              <LevelBadge level={p.level}/><span style={{fontSize:12}}>{p.name}</span>
+                            </div>
+                          ))}
+                        </td>
+                        <td style={{textAlign:'center'}}>
+                          <span className={`score-display ${g.winner==='A'?'win':g.winner==='B'?'lose':''}`}>{g.scoreA}</span>
+                          <span style={{color:'var(--text-dim)',margin:'0 6px'}}>–</span>
+                          <span className={`score-display ${g.winner==='B'?'win':g.winner==='A'?'lose':''}`}>{g.scoreB}</span>
+                        </td>
+                        <td>
+                          {g.teamB.map(p => (
+                            <div key={p.id} style={{display:'flex',gap:4,alignItems:'center',marginBottom:2}}>
+                              <LevelBadge level={p.level}/><span style={{fontSize:12}}>{p.name}</span>
+                            </div>
+                          ))}
+                        </td>
+                        <td>
+                          {g.winner === 'tie'
+                            ? <span style={{color:'var(--gold)',fontWeight:700,fontSize:12}}>TIE</span>
+                            : <span style={{color:'var(--green)',fontWeight:700,fontSize:12}}>Team {g.winner}</span>
+                          }
+                        </td>
+                        <td style={{color:'var(--text-muted)',fontSize:11}}>{g.duration}m</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+      )}
+
+      {/* STATS TAB */}
+      {activeTab === 'stats' && (
+        <div className="card">
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+            <div className="section-title" style={{marginBottom:0}}>Player Statistics — {Object.keys(playerStats).length} players</div>
+            {Object.keys(playerStats).length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={exportStatsCSV}
+                style={{display:'flex',alignItems:'center',gap:5,border:'1px solid var(--green)',color:'var(--green)'}}>
+                ⬇ Export CSV
+              </button>
+            )}
+          </div>
+          {Object.keys(playerStats).length === 0
+            ? <div className="empty-state">Complete games to see player stats here!</div>
+            : (
+              <div style={{overflowX:'auto'}}>
+                <table className="history-table" style={{tableLayout:'fixed',minWidth:580}}>
+                  <colgroup>
+                    <col style={{width:40}} />
+                    <col style={{width:160}} />
+                    <col style={{width:80}} />
+                    <col style={{width:60}} />
+                    <col style={{width:60}} />
+                    <col style={{width:70}} />
+                    <col style={{width:70}} />
+                    <col style={{width:70}} />
+                    <col style={{width:80}} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{textAlign:'center'}}>#</th>
+                      <th>Player</th>
+                      <th style={{textAlign:'center'}}>Level</th>
+                      <th style={{textAlign:'center'}}>Games</th>
+                      <th style={{textAlign:'center'}}>Wins</th>
+                      <th style={{textAlign:'center'}}>Losses</th>
+                      <th style={{textAlign:'center'}}>Win %</th>
+                      <th style={{textAlign:'center'}}>Pts For</th>
+                      <th style={{textAlign:'center'}}>Pts Ag.</th>
+                      <th style={{textAlign:'center'}}>Diff</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(playerStats)
+                      .sort((a,b) => b[1].wins - a[1].wins || b[1].games - a[1].games)
+                      .map(([id, s], i) => {
+                        const losses = s.games - s.wins;
+                        const winPct = s.games ? Math.round(s.wins / s.games * 100) : 0;
+                        const diff = s.pts - s.against;
+                        return (
+                          <tr key={id}>
+                            <td style={{textAlign:'center',color:'var(--text-dim)',fontWeight:700}}>{i+1}</td>
+                            <td>
+                              <span style={{fontWeight:700,fontSize:13}}>{s.name}</span>
+                            </td>
+                            <td style={{textAlign:'center'}}><LevelBadge level={s.level} /></td>
+                            <td style={{textAlign:'center',fontWeight:600}}>{s.games}</td>
+                            <td style={{textAlign:'center',fontWeight:700,color:'var(--green)'}}>{s.wins}</td>
+                            <td style={{textAlign:'center',fontWeight:600,color:'#f88'}}>{losses}</td>
+                            <td style={{textAlign:'center'}}>
+                              <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                                <span style={{fontWeight:700,fontSize:13}}>{winPct}%</span>
+                                <div style={{width:40,height:3,background:'var(--surface3)',borderRadius:4,overflow:'hidden'}}>
+                                  <div style={{width:`${winPct}%`,height:'100%',background:'var(--green)',borderRadius:4}}></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{textAlign:'center',fontWeight:600}}>{s.pts}</td>
+                            <td style={{textAlign:'center',fontWeight:600}}>{s.against}</td>
+                            <td style={{textAlign:'center',fontWeight:700,color: diff >= 0 ? 'var(--green)' : '#f88'}}>
+                              {diff >= 0 ? '+':''}{diff}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    }
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+      )}
+
+      {/* SESSION MODALS */}
+      {sessionModal === 'new' && (
+        <div className="session-modal-overlay" onClick={e => e.target === e.currentTarget && setSessionModal(null)}>
+          <div className="session-modal">
+            <h2>＋ New Session</h2>
+            <p>Starting a new session will clear all players, courts, and history from the current session. Make sure to <strong style={{color:'var(--teal)'}}>Save</strong> first if you want to keep this session!</p>
+            <div style={{marginBottom:14}}>
+              <label style={{fontSize:11,color:'var(--text-muted)',fontWeight:700,textTransform:'uppercase',letterSpacing:.5,display:'block',marginBottom:6}}>Session Name</label>
+              <input
+                placeholder={`Session ${savedSessions.length + 2}`}
+                value={newSessionName}
+                onChange={e => setNewSessionName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && startNewSession(newSessionName)}
+                autoFocus
+              />
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-gold" style={{flex:1}} onClick={() => startNewSession(newSessionName)}>Start New Session</button>
+              <button className="btn btn-ghost" onClick={() => setSessionModal(null)}>Cancel</button>
+            </div>
+            {history.length > 0 && (
+              <div style={{marginTop:12,display:'flex',gap:8}}>
+                <button className="btn btn-teal btn-sm" style={{flex:1}} onClick={() => { saveSession(); setTimeout(() => { setSessionModal('new'); }, 100); }}>
+                  💾 Save Current First
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {sessionModal === 'load' && (
+        <div className="session-modal-overlay" onClick={e => e.target === e.currentTarget && setSessionModal(null)}>
+          <div className="session-modal">
+            <h2>📂 Load Session</h2>
+            <p>Select a previously saved session to restore. Your current session will be replaced.</p>
+            {savedSessions.length === 0
+              ? <div className="empty-state" style={{padding:'20px 0'}}>No saved sessions yet. Hit 💾 Save to save the current session.</div>
+              : (
+                <div className="saved-sessions-list">
+                  {[...savedSessions].reverse().map(s => (
+                    <div key={s.name} className="saved-session-item" onClick={() => loadSession(s)}>
+                      <span style={{fontSize:16}}>📋</span>
+                      <div style={{flex:1}}>
+                        <div className="ssi-name">{s.name}</div>
+                        <div className="ssi-meta">
+                          {s.history?.length || 0} games · {s.queue?.length || 0} in queue · Saved {new Date(s.savedAt).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                        </div>
+                      </div>
+                      <button
+                        className="btn btn-red btn-sm"
+                        onClick={e => deleteSession(s.name, e)}
+                        title="Delete this session"
+                        style={{flexShrink:0}}
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+            <div style={{display:'flex',gap:8,marginTop:4}}>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={() => setSessionModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SCORE MODAL */}
+      {scoreModal && (() => {
+        // swapPending: id of the player selected to swap out
+        const swapWith = (idA, idB) => {
+          // idA is from teamA, idB from teamB — swap them
+          setModalTeamA(prev => prev.map(p => p.id === idA ? modalTeamB.find(p2 => p2.id === idB) : p));
+          setModalTeamB(prev => prev.map(p => p.id === idB ? modalTeamA.find(p2 => p2.id === idA) : p));
+        };
+        return (
+          <div className="score-modal-overlay" onClick={e => e.target === e.currentTarget && setScoreModal(null)}>
+            <div className="score-modal-inner" style={{width:400,maxWidth:'95vw'}}>
+              <h2>🏆 Game Over — Court {scoreModal.courtId}</h2>
+              <p style={{color:'var(--text-muted)',fontSize:13,marginTop:4}}>Swap players between teams if needed, then enter the score</p>
+
+              {/* Player swap grid */}
+              <div style={{margin:'16px 0 10px',background:'var(--surface2)',borderRadius:8,padding:'12px',border:'1px solid var(--border)'}}>
+                <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-muted)',marginBottom:10}}>
+                  Tap ⇄ to swap a player across teams
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:6,alignItems:'center'}}>
+                  {/* Team A header */}
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--blue)',textTransform:'uppercase',letterSpacing:1,textAlign:'center'}}>Team A</div>
+                  <div></div>
+                  <div style={{fontSize:10,fontWeight:700,color:'var(--orange)',textTransform:'uppercase',letterSpacing:1,textAlign:'center'}}>Team B</div>
+
+                  {/* Row per pair: A[0] vs B[0], A[1] vs B[1] */}
+                  {[0, 1].map(i => {
+                    const pA = modalTeamA[i];
+                    const pB = modalTeamB[i];
+                    if (!pA || !pB) return null;
+                    return (
+                      <React.Fragment key={i}>
+                        {/* Team A player */}
+                        <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--blue)44',display:'flex',alignItems:'center',gap:5}}>
+                          <LevelBadge level={pA.level} />
+                          <span style={{fontSize:12,fontWeight:600}}>{pA.name}</span>
+                        </div>
+
+                        {/* Swap button between this pair */}
+                        <div style={{display:'flex',flexDirection:'column',gap:4,alignItems:'center'}}>
+                          <button
+                            title={`Swap ${pA.name} ↔ ${pB.name}`}
+                            onClick={() => swapWith(pA.id, pB.id)}
+                            style={{background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--gold)',fontSize:16,padding:'6px 8px',lineHeight:1,fontWeight:700,transition:'all 0.15s'}}
+                            onMouseOver={e=>{e.currentTarget.style.background='var(--gold-dim)';e.currentTarget.style.borderColor='var(--gold)';}}
+                            onMouseOut={e=>{e.currentTarget.style.background='var(--surface3)';e.currentTarget.style.borderColor='var(--border)';}}
+                          >⇄</button>
+                        </div>
+
+                        {/* Team B player */}
+                        <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--orange)44',display:'flex',alignItems:'center',gap:5}}>
+                          <LevelBadge level={pB.level} />
+                          <span style={{fontSize:12,fontWeight:600}}>{pB.name}</span>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+
+                  {/* Cross-swap row: A[0] vs B[1] and A[1] vs B[0] */}
+                  {modalTeamA[0] && modalTeamA[1] && modalTeamB[0] && modalTeamB[1] && (
+                    <>
+                      <div style={{gridColumn:'1/-1',borderTop:'1px solid var(--border)',margin:'4px 0'}}></div>
+                      <div style={{fontSize:10,color:'var(--text-dim)',textAlign:'center',gridColumn:'1/-1',marginBottom:2}}>cross-swap</div>
+                      <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--blue)44',display:'flex',alignItems:'center',gap:5}}>
+                        <LevelBadge level={modalTeamA[0].level} />
+                        <span style={{fontSize:12,fontWeight:600}}>{modalTeamA[0].name}</span>
+                      </div>
+                      <button
+                        title={`Swap ${modalTeamA[0].name} ↔ ${modalTeamB[1].name}`}
+                        onClick={() => swapWith(modalTeamA[0].id, modalTeamB[1].id)}
+                        style={{background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--gold)',fontSize:16,padding:'6px 8px',lineHeight:1,fontWeight:700,transition:'all 0.15s'}}
+                        onMouseOver={e=>{e.currentTarget.style.background='var(--gold-dim)';e.currentTarget.style.borderColor='var(--gold)';}}
+                        onMouseOut={e=>{e.currentTarget.style.background='var(--surface3)';e.currentTarget.style.borderColor='var(--border)';}}
+                      >⇄</button>
+                      <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--orange)44',display:'flex',alignItems:'center',gap:5}}>
+                        <LevelBadge level={modalTeamB[1].level} />
+                        <span style={{fontSize:12,fontWeight:600}}>{modalTeamB[1].name}</span>
+                      </div>
+
+                      <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--blue)44',display:'flex',alignItems:'center',gap:5}}>
+                        <LevelBadge level={modalTeamA[1].level} />
+                        <span style={{fontSize:12,fontWeight:600}}>{modalTeamA[1].name}</span>
+                      </div>
+                      <button
+                        title={`Swap ${modalTeamA[1].name} ↔ ${modalTeamB[0].name}`}
+                        onClick={() => swapWith(modalTeamA[1].id, modalTeamB[0].id)}
+                        style={{background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:'var(--gold)',fontSize:16,padding:'6px 8px',lineHeight:1,fontWeight:700,transition:'all 0.15s'}}
+                        onMouseOver={e=>{e.currentTarget.style.background='var(--gold-dim)';e.currentTarget.style.borderColor='var(--gold)';}}
+                        onMouseOut={e=>{e.currentTarget.style.background='var(--surface3)';e.currentTarget.style.borderColor='var(--border)';}}
+                      >⇄</button>
+                      <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--orange)44',display:'flex',alignItems:'center',gap:5}}>
+                        <LevelBadge level={modalTeamB[0].level} />
+                        <span style={{fontSize:12,fontWeight:600}}>{modalTeamB[0].name}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Score inputs */}
+              <div className="score-inputs">
+                <div className="score-team">
+                  <label>Team A<br/><span style={{color:'#e8f0fe'}}>{modalTeamA.map(p=>p.name).join(' & ')}</span></label>
+                  <input type="number" min="0" max="99" value={scoreA} onChange={e=>setScoreA(e.target.value)} placeholder="0" autoFocus />
+                </div>
+                <div className="score-team">
+                  <label>Team B<br/><span style={{color:'#e8f0fe'}}>{modalTeamB.map(p=>p.name).join(' & ')}</span></label>
+                  <input type="number" min="0" max="99" value={scoreB} onChange={e=>setScoreB(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <div className="modal-btns">
+                <button className="btn btn-green" style={{flex:1}} onClick={submitScore}>Save Score & Return Players</button>
+                <button className="btn btn-ghost" onClick={() => setScoreModal(null)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
