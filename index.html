@@ -347,14 +347,60 @@ function App() {
 
   const findMatch = (q, mode) => {
     if (mode === 'Manual') return null;
-    // Shuffle a copy so every auto-assign picks random players each time
-    const rq = shuffle(q);
-    for (let i = 0; i < rq.length - 3; i++)
-    for (let j = i+1; j < rq.length - 2; j++)
-    for (let k = j+1; k < rq.length - 1; k++)
-    for (let l = k+1; l < rq.length; l++) {
-      const players = [rq[i], rq[j], rq[k], rq[l]];
-      // Also randomise which team split is tried first
+
+    // Build a per-player game count from history so we can prioritise
+    // players who have played fewer games (fairness).
+    const gameCounts = {};
+    history.forEach(g => {
+      [...g.teamA, ...g.teamB].forEach(p => {
+        gameCounts[p.id] = (gameCounts[p.id] || 0) + 1;
+      });
+    });
+    // Also count players currently ON a court so they aren't double-penalised
+    // when they finish — they already waited while others played.
+    const getGames = (p) => gameCounts[p.id] || 0;
+
+    // Sort queue: fewest games first, break ties randomly so it feels natural.
+    const sorted = [...q].sort((a, b) => {
+      const diff = getGames(a) - getGames(b);
+      if (diff !== 0) return diff;
+      return Math.random() - 0.5; // random tiebreak
+    });
+
+    // Try to pick from the front of the sorted list first (fewest games).
+    // We still try all valid 4-player combos from sorted order so partner
+    // and level constraints can be satisfied, but we prefer those closest
+    // to the front (i.e. with the fewest games played).
+    for (let i = 0; i < sorted.length - 3; i++)
+    for (let j = i+1; j < sorted.length - 2; j++)
+    for (let k = j+1; k < sorted.length - 1; k++)
+    for (let l = k+1; l < sorted.length; l++) {
+      // Only allow combinations where the maximum individual game gap
+      // between any two of the 4 players is at most 2.  This prevents
+      // a high-game-count player from slipping in alongside three
+      // low-game-count players just to satisfy a level constraint,
+      // while still giving flexibility when the queue is small or
+      // constraints are tight.
+      const players = [sorted[i], sorted[j], sorted[k], sorted[l]];
+      const gameCts = players.map(getGames);
+      if (Math.max(...gameCts) - Math.min(...gameCts) > 2) continue;
+
+      const combos = shuffle([[0,1,2,3],[0,2,1,3],[0,3,1,2]]);
+      for (const [a,b,c,d] of combos) {
+        const tA = [players[a], players[b]], tB = [players[c], players[d]];
+        if (teamCompatible(tA, tB, mode) && partnersRespected(tA, tB, mode)) {
+          return { teamA: tA, teamB: tB, ids: players.map(p => p.id) };
+        }
+      }
+    }
+
+    // Fallback: relax the game-gap constraint so we can always find a match
+    // when the queue is small or heavily constrained by level/partner rules.
+    for (let i = 0; i < sorted.length - 3; i++)
+    for (let j = i+1; j < sorted.length - 2; j++)
+    for (let k = j+1; k < sorted.length - 1; k++)
+    for (let l = k+1; l < sorted.length; l++) {
+      const players = [sorted[i], sorted[j], sorted[k], sorted[l]];
       const combos = shuffle([[0,1,2,3],[0,2,1,3],[0,3,1,2]]);
       for (const [a,b,c,d] of combos) {
         const tA = [players[a], players[b]], tB = [players[c], players[d]];
@@ -698,22 +744,33 @@ function App() {
             {queue.length === 0
               ? <div className="empty-state">No players in queue. Add some below!</div>
               : (
-                <div className="queue-list">
-                  {queue.map((p, i) => {
-                    const partner = p.partnerId ? queue.find(x => x.id === p.partnerId) : null;
-                    return (
-                      <div key={p.id} className="queue-item">
-                        <span className="queue-num">#{i+1}</span>
-                        <LevelBadge level={p.level} />
-                        <span className="queue-name">{p.name}</span>
-                        {partner && (
-                          <span className="partner-tag">🔗 {partner.name}</span>
-                        )}
-                        <button className="btn btn-ghost btn-sm" onClick={() => removeFromQueue(p.id)}>✕</button>
-                      </div>
-                    );
-                  })}
-                </div>
+                <>
+                  <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:8,lineHeight:1.5}}>
+                    Sorted by games played · Auto-assign always picks players with fewest games first.
+                  </div>
+                  <div className="queue-list">
+                    {[...queue]
+                      .sort((a, b) => (playerStats[a.id]?.games || 0) - (playerStats[b.id]?.games || 0))
+                      .map((p, i) => {
+                        const partner = p.partnerId ? queue.find(x => x.id === p.partnerId) : null;
+                        const gamesPlayed = playerStats[p.id]?.games || 0;
+                        return (
+                          <div key={p.id} className="queue-item">
+                            <span className="queue-num">#{i+1}</span>
+                            <LevelBadge level={p.level} />
+                            <span className="queue-name">{p.name}</span>
+                            {partner && (
+                              <span className="partner-tag">🔗 {partner.name}</span>
+                            )}
+                            <span style={{fontSize:10,color:'var(--text-muted)',marginLeft:'auto',marginRight:4,whiteSpace:'nowrap'}}>
+                              🎮 {gamesPlayed}g
+                            </span>
+                            <button className="btn btn-ghost btn-sm" onClick={() => removeFromQueue(p.id)}>✕</button>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
               )
             }
           </div>
