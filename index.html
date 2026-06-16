@@ -7,6 +7,7 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a1628; color: #e8f0fe; min-height: 100vh; }
@@ -38,8 +39,10 @@
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px; }
   .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-open { background: #1a2a1a; color: #aaffaa; border: 1px solid #00c85355; }
   .badge-beg { background: var(--green-dim); color: var(--green); }
   .badge-li { background: var(--blue-dim); color: var(--blue); }
+  .badge-int { background: var(--teal-dim); color: var(--teal); }
   .badge-hi { background: var(--orange-dim); color: var(--orange); }
   .badge-adv { background: var(--purple-dim); color: #ce93d8; }
   .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
@@ -110,6 +113,8 @@
   .player-select-item.selected { border-color: var(--green); background: var(--green-dim); color: var(--green); }
   .notification { position: fixed; top: 20px; right: 20px; background: var(--surface); border: 1px solid var(--green); border-radius: var(--r); padding: 14px 18px; font-size: 13px; font-weight: 600; color: var(--green); z-index: 200; animation: slideIn 0.3s ease; max-width: 300px; box-shadow: 0 4px 20px rgba(0,200,83,0.2); }
   @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .two-col { display: grid; grid-template-columns: 1fr 300px; gap: 12px; }
   @media (max-width: 700px) {
     .stat-grid { grid-template-columns: repeat(2,1fr); }
@@ -138,6 +143,17 @@
   .ssi-name { font-weight: 700; font-size: 13px; flex: 1; }
   .ssi-meta { font-size: 11px; color: var(--text-muted); }
   .btn-teal { background: var(--teal); color: #000; }
+  .btn-orange { background: var(--orange); color: #000; }
+  .req-item { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--orange); border-radius: 6px; padding: 8px 10px; }
+  .req-badge { font-size: 10px; font-weight: 800; background: var(--orange-dim); color: var(--orange); border-radius: 20px; padding: 2px 7px; white-space: nowrap; }
+  .pair-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; }
+  .pair-modal { background: var(--surface); border: 1px solid var(--purple); border-radius: 12px; padding: 24px; width: 360px; max-width: 95vw; }
+  .pair-modal h2 { font-size: 16px; font-weight: 800; margin-bottom: 4px; color: #ce93d8; }
+  .pair-modal p { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+  .pair-select-list { display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; margin-bottom: 12px; }
+  .pair-select-item { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; transition: all 0.15s; }
+  .pair-select-item:hover { border-color: var(--purple); }
+  .pair-select-item.selected { border-color: var(--purple); background: var(--purple-dim); color: #ce93d8; }
 </style>
 </head>
 <body>
@@ -145,31 +161,36 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-const LEVELS = ['Beginner', 'Low-Int', 'High-Int', 'Advanced'];
-const LEVEL_SHORT = { 'Beginner': 'BEG', 'Low-Int': 'L-INT', 'High-Int': 'H-INT', 'Advanced': 'ADV' };
-const LEVEL_IDX = { 'Beginner': 0, 'Low-Int': 1, 'High-Int': 2, 'Advanced': 3 };
-const BADGE_CLASS = { 'Beginner': 'badge-beg', 'Low-Int': 'badge-li', 'High-Int': 'badge-hi', 'Advanced': 'badge-adv' };
+const LEVELS = ['Open', 'Beginner', 'Low-Int', 'Intermediate', 'High-Int', 'Advanced'];
+const LEVEL_SHORT = { 'Open': 'OPEN', 'Beginner': 'BEG', 'Low-Int': 'L-INT', 'Intermediate': 'INT', 'High-Int': 'H-INT', 'Advanced': 'ADV' };
+const LEVEL_IDX = { 'Open': -1, 'Beginner': 0, 'Low-Int': 1, 'Intermediate': 2, 'High-Int': 3, 'Advanced': 4 };
+const BADGE_CLASS = { 'Open': 'badge-open', 'Beginner': 'badge-beg', 'Low-Int': 'badge-li', 'Intermediate': 'badge-int', 'High-Int': 'badge-hi', 'Advanced': 'badge-adv' };
 const TIME_OPTIONS = [15, 20, 24, 30];
-const MATCH_MODES = ['Same Level', 'Consecutive', 'Mixed', 'Manual'];
+const MATCH_MODES = ['Same Level', 'Skill Based', 'Open Level', 'Manual'];
 
 let nextId = 200;
 const uid = () => `p${nextId++}`;
 
 const INIT_PLAYERS = [
-  { id: uid(), name: 'Alex', level: 'Beginner', partnerId: null },
-  { id: uid(), name: 'Sam', level: 'Beginner', partnerId: null },
-  { id: uid(), name: 'Jordan', level: 'Low-Int', partnerId: null },
-  { id: uid(), name: 'Casey', level: 'Low-Int', partnerId: null },
-  { id: uid(), name: 'Riley', level: 'High-Int', partnerId: null },
-  { id: uid(), name: 'Morgan', level: 'High-Int', partnerId: null },
-  { id: uid(), name: 'Taylor', level: 'Advanced', partnerId: null },
-  { id: uid(), name: 'Drew', level: 'Advanced', partnerId: null },
-  { id: uid(), name: 'Jamie', level: 'Beginner', partnerId: null },
-  { id: uid(), name: 'Quinn', level: 'Low-Int', partnerId: null },
+  { id: uid(), name: 'Alex', level: 'Beginner', partnerId: null, gender: 'M' },
+  { id: uid(), name: 'Sam', level: 'Beginner', partnerId: null, gender: 'F' },
+  { id: uid(), name: 'Jordan', level: 'Low-Int', partnerId: null, gender: 'M' },
+  { id: uid(), name: 'Casey', level: 'Low-Int', partnerId: null, gender: 'F' },
+  { id: uid(), name: 'Riley', level: 'High-Int', partnerId: null, gender: 'M' },
+  { id: uid(), name: 'Morgan', level: 'High-Int', partnerId: null, gender: 'F' },
+  { id: uid(), name: 'Taylor', level: 'Advanced', partnerId: null, gender: 'M' },
+  { id: uid(), name: 'Drew', level: 'Advanced', partnerId: null, gender: 'M' },
+  { id: uid(), name: 'Jamie', level: 'Beginner', partnerId: null, gender: 'F' },
+  { id: uid(), name: 'Quinn', level: 'Low-Int', partnerId: null, gender: 'M' },
 ];
 
 function LevelBadge({ level }) {
   return <span className={`badge ${BADGE_CLASS[level] || 'badge-beg'}`}>{LEVEL_SHORT[level] || level}</span>;
+}
+
+function GenderTag({ gender }) {
+  if (gender === 'F') return <span style={{fontSize:11,fontWeight:800,color:'#f06292',background:'#2a0818',border:'1px solid #e91e6344',borderRadius:20,padding:'1px 6px',flexShrink:0}}>♀</span>;
+  return <span style={{fontSize:11,fontWeight:800,color:'#64b5f6',background:'#0d2040',border:'1px solid #2196f344',borderRadius:20,padding:'1px 6px',flexShrink:0}}>♂</span>;
 }
 
 function CourtTimer({ startTime, limitMin }) {
@@ -187,6 +208,178 @@ function CourtTimer({ startTime, limitMin }) {
   return <span className={`court-timer ${cls}`}>{rem < 0 ? '-' : ''}{min}:{sec}</span>;
 }
 
+function PlayerListTab({ playerList, setPlayerList, playerListSearch, setPlayerListSearch, queue, setQueue, courts, showNotif,
+  addingPair, setAddingPair,
+  newName, setNewName, newLevel, setNewLevel, newGender, setNewGender,
+  newPartnerName, setNewPartnerName, newPartnerLevel, setNewPartnerLevel, newPartnerGender, setNewPartnerGender,
+  addPlayer, onJoin
+}) {
+  const [plEditId, setPlEditId] = useState(null);
+  const [plEditName, setPlEditName] = useState('');
+  const [plEditLevel, setPlEditLevel] = useState('Open');
+  const [plEditGender, setPlEditGender] = useState('M');
+
+  const filtered = playerList.filter(p =>
+    !playerListSearch.trim() || p.name.toLowerCase().includes(playerListSearch.trim().toLowerCase())
+  );
+
+  const addToWaitlist = (p) => {
+    if (queue.some(q => q.id === p.id || q.name.toLowerCase() === p.name.toLowerCase())) {
+      showNotif(`${p.name} is already in the waitlist`); return;
+    }
+    if (onJoin) onJoin(p.id);
+    setQueue(prev => [...prev, { ...p }]);
+    showNotif(`${p.name} added to Waitlist!`);
+  };
+
+  const removeFromPlayerList = (id) => {
+    setPlayerList(prev => prev.filter(p => p.id !== id));
+    // Also remove from waitlist (queue), unlinking any fixed partner
+    setQueue(prev => {
+      const target = prev.find(p => p.id === id);
+      if (!target) return prev;
+      const without = prev.filter(p => p.id !== id);
+      if (target.partnerId) {
+        return without.map(p => p.id === target.partnerId ? { ...p, partnerId: null } : p);
+      }
+      return without;
+    });
+  };
+
+  const saveEdit = (id) => {
+    if (!plEditName.trim()) return;
+    setPlayerList(prev => prev.map(p => p.id === id
+      ? { ...p, name: plEditName.trim(), level: plEditLevel, gender: plEditGender }
+      : p
+    ));
+    setPlEditId(null);
+    showNotif('Player updated!');
+  };
+
+  return (
+    <div className="two-col">
+      <div className="card">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,flexWrap:'wrap',gap:6}}>
+          <div className="section-title" style={{marginBottom:0}}>Master Player List — {playerList.length} players</div>
+        </div>
+        <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:10,lineHeight:1.5}}>
+          This is your master roster. Add players here, then click <strong style={{color:'var(--green)'}}>+ Waitlist</strong> to put them in today's queue. Removing from the waitlist does not remove them from this list.
+        </div>
+        <div style={{position:'relative',marginBottom:10}}>
+          <span style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--text-dim)',pointerEvents:'none'}}>🔍</span>
+          <input type="text" placeholder="Search player…" value={playerListSearch}
+            onChange={e => setPlayerListSearch(e.target.value)}
+            style={{paddingLeft:30,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,fontSize:12,color:'#e8f0fe',width:'100%'}} />
+          {playerListSearch && (
+            <button onClick={() => setPlayerListSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:14,lineHeight:1,padding:0}}>✕</button>
+          )}
+        </div>
+        {filtered.length === 0
+          ? <div className="empty-state">{playerList.length === 0 ? 'No players yet. Add some →' : 'No players match search.'}</div>
+          : (
+            <div className="queue-list" style={{maxHeight:480}}>
+              {filtered.map((p, idx) => {
+                const inQueue = queue.some(q => q.id === p.id);
+                const onCourt = courts.some(c => c.players && [...c.players.teamA,...c.players.teamB].find(x=>x.id===p.id));
+                const isEditing = plEditId === p.id;
+                return (
+                  <div key={p.id} className="queue-item">
+                    <span className="queue-num">{idx+1}</span>
+                    {!isEditing ? (
+                      <>
+                        <GenderTag gender={p.gender} />
+                        <LevelBadge level={p.level} />
+                        <span className="queue-name">{p.name}</span>
+                        {inQueue && <span style={{fontSize:10,fontWeight:800,color:'var(--gold)',background:'var(--gold-dim)',borderRadius:10,padding:'1px 6px',flexShrink:0}}>In Queue</span>}
+                        {onCourt && <span style={{fontSize:10,fontWeight:800,color:'var(--green)',background:'var(--green-dim)',borderRadius:10,padding:'1px 6px',flexShrink:0}}>On Court</span>}
+                        <div style={{display:'flex',gap:4,marginLeft:'auto',flexShrink:0}}>
+                          {!inQueue && !onCourt && (
+                            <button className="btn btn-green btn-sm" onClick={() => addToWaitlist(p)} title="Add to today's waitlist">+ Waitlist</button>
+                          )}
+                          <button className="btn btn-ghost btn-sm" onClick={() => { setPlEditId(p.id); setPlEditName(p.name); setPlEditLevel(p.level); setPlEditGender(p.gender); }} title="Edit">✏️</button>
+                          <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={() => removeFromPlayerList(p.id)} title="Remove from list">✕</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <input value={plEditName} onChange={e => setPlEditName(e.target.value)}
+                          style={{flex:1,fontSize:12,padding:'4px 8px'}} autoFocus onKeyDown={e => e.key==='Enter' && saveEdit(p.id)} />
+                        <select value={plEditLevel} onChange={e => setPlEditLevel(e.target.value)} style={{fontSize:12,padding:'4px 6px',width:'auto'}}>
+                          {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                        <button onClick={() => setPlEditGender(g => g==='M'?'F':'M')}
+                          style={{background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,cursor:'pointer',color:plEditGender==='F'?'#f06292':'#64b5f6',fontWeight:800,fontSize:12,padding:'4px 8px'}}>
+                          {plEditGender==='M'?'♂':'♀'}
+                        </button>
+                        <button className="btn btn-green btn-sm" onClick={() => saveEdit(p.id)}>✓</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setPlEditId(null)}>✕</button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        }
+      </div>
+      <div className="card">
+        <div className="section-title">Add Player</div>
+        <div className="add-player-form">
+          {/* Toggle: solo vs fixed pair */}
+          <div style={{display:'flex',gap:6,marginBottom:4}}>
+            <button className={`mode-btn ${!addingPair?'active':''}`} onClick={() => setAddingPair(false)} style={{flex:1,borderRadius:6}}>Solo Player</button>
+            <button className={`mode-btn ${addingPair?'active':''}`}
+              style={{flex:1,background:addingPair?'var(--purple)':'transparent',borderColor:addingPair?'var(--purple)':'var(--border)',color:addingPair?'#fff':'var(--text-muted)',borderRadius:6}}
+              onClick={() => setAddingPair(true)}>🔗 Fixed Pair</button>
+          </div>
+          {/* Player 1 */}
+          <div style={{background:'var(--surface2)',borderRadius:6,padding:'8px',border:'1px solid var(--border)'}}>
+            <div style={{fontSize:10,color:'var(--text-muted)',fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{addingPair ? 'Player 1' : 'Player'}</div>
+            <input placeholder="Name" value={newName} onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addPlayer()} style={{marginBottom:6}} />
+            <select value={newLevel} onChange={e => setNewLevel(e.target.value)} style={{marginBottom:6}}>
+              {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+            <div style={{display:'flex',gap:6}}>
+              <button type="button" onClick={() => setNewGender('M')}
+                style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newGender==='M'?'var(--blue)':'var(--border)'}`,background:newGender==='M'?'var(--blue-dim)':'transparent',color:newGender==='M'?'var(--blue)':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>♂ Male</button>
+              <button type="button" onClick={() => setNewGender('F')}
+                style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newGender==='F'?'#e91e63':'var(--border)'}`,background:newGender==='F'?'#2a0818':'transparent',color:newGender==='F'?'#f06292':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>♀ Female</button>
+            </div>
+          </div>
+          {/* Player 2 (only when adding pair) */}
+          {addingPair && (
+            <div style={{background:'var(--purple-dim)',borderRadius:6,padding:'8px',border:'1px solid #9c27b055'}}>
+              <div style={{fontSize:10,color:'#ce93d8',fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>🔗 Partner (Player 2)</div>
+              <input placeholder="Partner name" value={newPartnerName} onChange={e => setNewPartnerName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addPlayer()} style={{marginBottom:6,borderColor:'#9c27b055'}} />
+              <select value={newPartnerLevel} onChange={e => setNewPartnerLevel(e.target.value)} style={{borderColor:'#9c27b055',marginBottom:6}}>
+                {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <div style={{display:'flex',gap:6,marginBottom:6}}>
+                <button type="button" onClick={() => setNewPartnerGender('M')}
+                  style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newPartnerGender==='M'?'var(--blue)':'#9c27b044'}`,background:newPartnerGender==='M'?'var(--blue-dim)':'transparent',color:newPartnerGender==='M'?'var(--blue)':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>♂ Male</button>
+                <button type="button" onClick={() => setNewPartnerGender('F')}
+                  style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newPartnerGender==='F'?'#e91e63':'#9c27b044'}`,background:newPartnerGender==='F'?'#2a0818':'transparent',color:newPartnerGender==='F'?'#f06292':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>♀ Female</button>
+              </div>
+              <div style={{fontSize:10,color:'#ce93d8',lineHeight:1.5}}>Fixed partners will always be placed on the same team.</div>
+            </div>
+          )}
+          <button className="btn btn-green" onClick={addPlayer}>
+            {addingPair ? '🔗 Add Fixed Pair' : 'Add to Queue & List'}
+          </button>
+        </div>
+        <div style={{marginTop:16,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)',fontSize:12,color:'var(--text-muted)',lineHeight:1.7}}>
+          <div style={{fontWeight:700,color:'#e8f0fe',marginBottom:4}}>How it works</div>
+          <div>• Adding a player here adds them to both the master list and today's waitlist.</div>
+          <div>• Click <strong style={{color:'var(--green)'}}>+ Waitlist</strong> to re-add a player to today's queue after they were removed.</div>
+          <div>• Edit or remove players from the master list at any time.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [numCourts, setNumCourts] = useState(3);
   const [gameTime, setGameTime] = useState(20);
@@ -197,11 +390,14 @@ function App() {
   );
   const [history, setHistory] = useState([]);
   const [newName, setNewName] = useState('');
-  const [newLevel, setNewLevel] = useState('Beginner');
+  const [newLevel, setNewLevel] = useState('Open');
+  const [newGender, setNewGender] = useState('M');
   const [newPartnerName, setNewPartnerName] = useState('');
-  const [newPartnerLevel, setNewPartnerLevel] = useState('Beginner');
+  const [newPartnerLevel, setNewPartnerLevel] = useState('Open');
+  const [newPartnerGender, setNewPartnerGender] = useState('M');
   const [addingPair, setAddingPair] = useState(false);
   const [scoreModal, setScoreModal] = useState(null);
+  const [scoringEnabled, setScoringEnabled] = useState(false);
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
   const [modalTeamA, setModalTeamA] = useState([]);
@@ -210,7 +406,116 @@ function App() {
   const [activeTab, setActiveTab] = useState('courts');
   const [manualSelected, setManualSelected] = useState([]);
   const [manualCourt, setManualCourt] = useState(null);
+  const [waitlistSearch, setWaitlistSearch] = useState('');
+  const [playerListSearch, setPlayerListSearch] = useState('');
+  const [playerList, setPlayerList] = useState(INIT_PLAYERS.map(p => ({...p})));
+  const [manualSearch, setManualSearch] = useState('');
+  const [reqSearch, setReqSearch] = useState('');
+  const [pairSearch, setPairSearch] = useState('');
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
+  const [rearrangeCourt, setRearrangeCourt] = useState(null); // courtId being rearranged
+  const [dragPlayerId, setDragPlayerId] = useState(null);     // id of player being dragged
+  const [replacingPlayer, setReplacingPlayer] = useState(null); // { courtId, playerId } — sub-out mode
+  const [editingPlayerName, setEditingPlayerName] = useState('');
+  const [editingPlayerLevel, setEditingPlayerLevel] = useState('Open');
+  const [simModal, setSimModal] = useState(false);
+  const [simGames, setSimGames] = useState('96');
+  const [simRunning, setSimRunning] = useState(false);
+  const [simProgress, setSimProgress] = useState(0);
+  const [simTarget, setSimTarget] = useState(0);
   const notifTimer = useRef(null);
+  const assignCount = useRef(0); // counts auto-assigns to schedule mixed doubles every 3rd game
+  const sbMixedCount = useRef(0); // tracks Skill Based mixed-gender rotation
+  const olSameGenderStreak = useRef(0); // Open Level: consecutive same-gender games streak
+
+  // ── Sorting state for grid views ──────────────────────────────────────
+  const [historySort, setHistorySort] = useState({ col: null, dir: 'asc' });
+  const [statsSort, setStatsSort] = useState({ col: 'wins', dir: 'desc' });
+  const [queueSort, setQueueSort] = useState({ col: null, dir: 'asc' });
+
+  const toggleSort = (currentSort, setSort, col) => {
+    setSort(prev => prev.col === col
+      ? { col, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+      : { col, dir: col === 'wins' || col === 'games' || col === 'winPct' || col === 'diff' ? 'desc' : 'asc' }
+    );
+  };
+
+  const SortIcon = ({ sort, col }) => {
+    if (sort.col !== col) return <span style={{opacity:0.25,marginLeft:3,fontSize:9}}>⇅</span>;
+    return <span style={{marginLeft:3,fontSize:9,color:'var(--gold)'}}>{sort.dir === 'asc' ? '▲' : '▼'}</span>;
+  };
+
+  // ── Pairing history (partner + opponent repeat avoidance) ────────────
+  // Flat map: "idA|idB" (sorted) → number of times they shared a court.
+  // Incremented when a game is recorded. Used to score candidate matches
+  // so the algorithm prefers combos where players haven't faced/partnered before.
+  const pairingHistory = useRef({}); // { "id1|id2": count, ... }
+
+  const phKey = (a, b) => [a, b].sort().join('|');
+
+  const phGet = (a, b) => pairingHistory.current[phKey(a, b)] || 0;
+
+  const phRecord = (teamA, teamB) => {
+    const bump = (a, b) => {
+      const k = phKey(a, b);
+      pairingHistory.current[k] = (pairingHistory.current[k] || 0) + 1;
+    };
+    // Partners
+    if (teamA[0] && teamA[1]) bump(teamA[0].id, teamA[1].id);
+    if (teamB[0] && teamB[1]) bump(teamB[0].id, teamB[1].id);
+    // Opponents (all cross-team pairs)
+    for (const pA of teamA) for (const pB of teamB) bump(pA.id, pB.id);
+  };
+
+  // (lastPlayedTime removed — time-based cooldowns must not affect matchmaking)
+  // ── Games-played tracking (balances total game count across all players) ──
+  const gamesPlayedRef = useRef({}); // { playerId: count }
+  // ── Join-round tracking: fairness relative to when each player joined ──
+  // joinRoundRef[playerId] = value of roundsFiredRef when they first joined the session.
+  // This ensures late arrivals are compared fairly — a player who joined at round 6
+  // is NOT penalized for having fewer games than someone who joined at round 0.
+  const joinRoundRef = useRef({});  // { playerId: roundNumber }
+  const roundsFiredRef = useRef(0); // total games fired since session start
+
+  // Score a candidate match: sum of all pairings among the 4 players.
+  // Lower = fresher. Partner pairs weighted 2× to more strongly avoid
+  // repeating the same partner vs the same opponent.
+  // Also adds a heavy penalty for players who just finished a game (< cooldownMs ago).
+  // scoreMatch: pure pairing-history freshness score.
+  // Lower = fewer repeated partner/opponent combos = preferred match.
+  // Scoring and time-based cooldowns are intentionally excluded —
+  // the scoring feature is for recording only and must not affect matchmaking.
+  // Freshness score for a candidate match.
+  // Primary: max repeat count across ALL 6 pairs (partner + opponent).
+  //   → A combo where ANY two players have met before scores worse than one where everyone is new.
+  //   → Ensures fresh partner AND fresh opponents, not just shuffling one piece.
+  // Secondary (tiebreak): total repeat count across all pairs.
+  //   → Among combos with the same worst pair, prefer the one with fewer repeats overall.
+  // Returns [maxRepeat, totalRepeats] — sort ascending on both.
+  const scoreMatch = (teamA, teamB) => {
+    const pairs = [
+      phGet(teamA[0].id, teamA[1].id), // partner A
+      phGet(teamB[0].id, teamB[1].id), // partner B
+      phGet(teamA[0].id, teamB[0].id), // opponents
+      phGet(teamA[0].id, teamB[1].id),
+      phGet(teamA[1].id, teamB[0].id),
+      phGet(teamA[1].id, teamB[1].id),
+    ];
+    const maxRepeat = Math.max(...pairs);
+    const totalRepeats = pairs.reduce((s, v) => s + v, 0);
+    // Pack into a single comparable number: maxRepeat dominates, totalRepeats breaks ties
+    return maxRepeat * 1000 + totalRepeats;
+  };
+
+
+
+  // ── Requested games queue ────────────────────────────────────────────
+  const [requestedGames, setRequestedGames] = useState([]); // [{ id, playerIds, addedAt }]
+
+  // ── Pair-link modal (set/remove fixed partner on existing players) ───
+  const [pairModal, setPairModal] = useState(null); // null | { playerId }
+  const [pairTarget, setPairTarget] = useState(null); // id of chosen partner
+  const [reqSelected, setReqSelected] = useState([]); // players selected for a new requested game
 
   // ── Session management ──────────────────────────────────────────────
   const [sessionName, setSessionName] = useState(() => {
@@ -225,6 +530,499 @@ function App() {
   });
   const [newSessionName, setNewSessionName] = useState('');
   const [lastSaved, setLastSaved] = useState(null);
+  const previewWinRef = useRef(null);
+  const [autoPreview, setAutoPreview] = useState(false);
+  const [autoAlert, setAutoAlert] = useState(false);
+  const [showUpNext, setShowUpNext] = useState(false);
+  const prevCourtsRef = useRef(courts);
+
+  // Send alert overlay to the preview window instead of opening a separate popup.
+  // If the preview window isn't open yet, open it first then send the alert once ready.
+  const sendAlertToPreview = (courtId, teamA, teamB) => {
+    const payload = { type: 'DR_ALERT', courtId, teamA, teamB };
+
+    const sendTo = (win) => {
+      try { win.postMessage(payload, '*'); } catch(e) {}
+    };
+
+    if (previewWinRef.current && !previewWinRef.current.closed) {
+      sendTo(previewWinRef.current);
+    } else {
+      // Open the preview window first, then send the alert after it's ready
+      openPreviewWindow();
+      const attempts = [600, 1200, 2000];
+      attempts.forEach(ms => setTimeout(() => {
+        if (previewWinRef.current && !previewWinRef.current.closed) sendTo(previewWinRef.current);
+      }, ms));
+    }
+  };
+
+  // Auto-open preview window when a court becomes active (game started), if autoPreview is on
+  // Auto-open alert window when a court becomes active, if autoAlert is on
+  useEffect(() => {
+    const prevActive = prevCourtsRef.current.filter(c => c.players).length;
+    const nowActive = courts.filter(c => c.players).length;
+    if (nowActive > prevActive) {
+      if (autoPreview) openPreviewWindow();
+      if (autoAlert) {
+        const newCourt = courts.find(c => c.players && !prevCourtsRef.current.find(pc => pc.id === c.id && pc.players));
+        if (newCourt) sendAlertToPreview(newCourt.id, newCourt.players.teamA, newCourt.players.teamB);
+      }
+    }
+    prevCourtsRef.current = courts;
+  }, [courts, autoPreview, autoAlert]);
+
+  // Listen for preview window signalling it's ready, then push current state
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data && e.data.type === 'DR_PREVIEW_READY' && previewWinRef.current && !previewWinRef.current.closed) {
+        try {
+          previewWinRef.current.postMessage(
+            { type: 'DR_PREVIEW_UPDATE', courts, gameTime, sessionName, upNext: computeUpNext() }, '*'
+          );
+        } catch(err) {}
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [courts, gameTime, sessionName]);
+
+  // Push state to preview window whenever courts/gameTime/sessionName change
+  useEffect(() => {
+    if (previewWinRef.current && !previewWinRef.current.closed) {
+      try {
+        previewWinRef.current.postMessage(
+          { type: 'DR_PREVIEW_UPDATE', courts, gameTime, sessionName, upNext: computeUpNext() }, '*'
+        );
+      } catch(e) {}
+    }
+  }, [courts, gameTime, sessionName]);
+
+  // Compute upNext matches for the preview window — mirrors the Up Next preview logic
+  const computeUpNext = () => {
+    if (matchMode === 'Manual') return [];
+    const upNextMatches = [];
+    // Cap to first 20 players — avoids O(n⁴) hang with large rosters.
+    let simQueue = queue.slice(0, 20);
+    let simAssignCount = assignCount.current;
+    let simSbMixedCount = sbMixedCount.current;
+    let simOlStreak = olSameGenderStreak.current;
+    for (let n = 0; n < 2; n++) {
+      if (simQueue.length < 4) break;
+      simAssignCount += 1;
+      let forceMixed = false;
+      if (matchMode === 'Same Level') forceMixed = simAssignCount % 3 === 0;
+      if (matchMode === 'Open Level') forceMixed = simOlStreak >= 2;
+      if (matchMode === 'Skill Based') { simSbMixedCount += 1; forceMixed = simSbMixedCount % 3 === 0; }
+      let simPriorityIds = null;
+      for (const req of requestedGames) {
+        if (!req.readyToFire) continue;
+        const positions = req.playerIds.map(id => simQueue.findIndex(p => p.id === id));
+        if (positions.some(pos => pos === -1)) continue;
+        const maxPos = Math.max(...positions);
+        const othersAhead = simQueue.slice(0, maxPos).filter(p => !req.playerIds.includes(p.id)).length;
+        if (othersAhead === 0) { simPriorityIds = req.playerIds; break; }
+      }
+      const m = findMatch(simQueue, matchMode, forceMixed, simPriorityIds);
+      if (!m) break;
+      upNextMatches.push(m);
+      simQueue = simQueue.filter(p => !m.ids.includes(p.id));
+    }
+    return upNextMatches;
+  };
+
+  const openPreviewWindow = () => {
+    if (previewWinRef.current && !previewWinRef.current.closed) {
+      previewWinRef.current.focus();
+      try {
+        previewWinRef.current.postMessage(
+          { type: 'DR_PREVIEW_UPDATE', courts, gameTime, sessionName, upNext: computeUpNext() }, '*'
+        );
+      } catch(e) {}
+      return;
+    }
+    const previewHTML = buildPreviewHTML();
+    const blob = new Blob([previewHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, 'DinkPreview', 'width=1200,height=750,resizable=yes,scrollbars=yes');
+    previewWinRef.current = win;
+    const courtsSnap = courts, gtSnap = gameTime, snSnap = sessionName;
+    const sendInitial = () => {
+      try { win.postMessage({ type: 'DR_PREVIEW_UPDATE', courts: courtsSnap, gameTime: gtSnap, sessionName: snSnap, upNext: computeUpNext() }, '*'); } catch(e) {}
+    };
+    setTimeout(sendInitial, 400);
+    setTimeout(sendInitial, 900);
+    setTimeout(sendInitial, 1800);
+    showNotif('Preview window opened!');
+  };
+
+  const buildPreviewHTML = () => `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏓 Court Display — DINK Republic</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #00c853; --green-dim: #0d2a18;
+    --gold: #ffd600; --gold-dim: #2a2200;
+    --blue: #2196f3; --blue-dim: #0d2040;
+    --red: #f44336;
+    --orange: #ff9800;
+    --purple: #ce93d8; --purple-dim: #1a0a2a;
+    --surface: #0d1f3c; --surface2: #112240; --surface3: #172a4a;
+    --border: #1e3a6a; --text-muted: #6a8cb4;
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #060f20;
+    color: #e8f0fe;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 22px; font-weight: 900; color: var(--green); letter-spacing: 1px; text-transform: uppercase; }
+  header .subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  #clock { font-size: 20px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; }
+  #courts-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+    padding: 22px 24px;
+    align-content: start;
+  }
+  .court-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.3s;
+    min-height: 200px;
+  }
+  .court-card.active { border-color: var(--green); background: #0a2016; }
+  .court-card.open { border-color: #1e3a6a; border-style: dashed; opacity: 0.55; }
+  .court-card.up-next { border-color: #2a4070; border-style: dashed; opacity: 0.7; position: relative; overflow: hidden; }
+  .court-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .court-num {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: #e8f0fe;
+  }
+  .court-num span { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-left: 4px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: middle; }
+  .dot-green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot-gray { background: #2a4070; }
+  .timer {
+    font-size: 26px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+  }
+  .timer-ok { color: var(--green); }
+  .timer-warn { color: var(--orange); }
+  .timer-over { color: var(--red); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .teams { display: flex; flex-direction: column; gap: 6px; }
+  .team-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 2px;
+  }
+  .team-a .team-label { color: var(--blue); }
+  .team-b .team-label { color: var(--orange); }
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .player-name-big { font-size: 18px; font-weight: 700; }
+  .badge {
+    display: inline-block; padding: 2px 7px; border-radius: 20px;
+    font-size: 10px; font-weight: 800; flex-shrink: 0;
+  }
+  .badge-beg { background: #1a3a2a; color: #00c853; }
+  .badge-li { background: #0d2040; color: #2196f3; }
+  .badge-int { background: #0a2228; color: #00bcd4; }
+  .badge-hi { background: #2a1800; color: #ff9800; }
+  .badge-adv { background: #1a0a2a; color: #ce93d8; }
+  .vs-divider {
+    text-align: center; font-size: 11px; font-weight: 800;
+    color: var(--text-muted); letter-spacing: 2px; padding: 2px 0;
+  }
+  .open-label {
+    text-align: center; font-size: 15px; font-weight: 600;
+    color: #2a4070; margin: auto 0;
+  }
+  footer {
+    text-align: center;
+    padding: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ── Game-starting alert overlay (shown on this preview screen) ── */
+  #alert-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 15, 32, 0.92);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInBg 0.3s ease;
+  }
+  #alert-overlay.visible { display: flex; }
+  @keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+  .alert-card {
+    background: #0d1f3c;
+    border: 2px solid #ffd600;
+    border-radius: 20px;
+    padding: 48px 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 560px;
+    width: 90%;
+    box-shadow: 0 0 60px rgba(255,214,0,0.18), 0 8px 40px rgba(0,0,0,0.6);
+    animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes popIn { from { opacity:0; transform: scale(0.88) translateY(24px); } to { opacity:1; transform: scale(1) translateY(0); } }
+  .alert-ping { font-size: 72px; margin-bottom: 18px; animation: bounce 0.65s ease infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+  .alert-court-label {
+    font-size: 26px; font-weight: 900; letter-spacing: 3px;
+    text-transform: uppercase; color: #ffd600; margin-bottom: 6px;
+  }
+  .alert-subtitle {
+    font-size: 13px; color: #4a6a94; margin-bottom: 34px;
+    letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+  }
+  .alert-players { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+  .alert-player-row {
+    background: #112240;
+    border: 2px solid #1e3a6a;
+    border-radius: 14px;
+    padding: 18px 28px;
+    text-align: center;
+  }
+  .alert-pname { font-size: 40px; font-weight: 900; letter-spacing: 0.5px; color: #e8f0fe; }
+  .alert-close-btn {
+    margin-top: 32px;
+    padding: 16px 56px;
+    background: #ffd600;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .alert-close-btn:hover { background: #ffe033; transform: translateY(-2px); }
+  .alert-close-btn:active { transform: translateY(0); }
+</style>
+</he${""}ad>
+<bo${""}dy>
+<header>
+  <div>
+    <h1>🏓 DINK Republic — Court Display</h1>
+    <div class="subtitle" id="session-name">Live Court View</div>
+  </div>
+  <div id="clock">--:--:--</div>
+</header>
+<div id="courts-grid"></div>
+<footer>Court Preview · Updates automatically from the main app</footer>
+
+<!-- Game-starting alert overlay — triggered via postMessage from main app -->
+<div id="alert-overlay">
+  <div class="alert-card">
+    <div class="alert-ping">🏓</div>
+    <div class="alert-court-label" id="alert-court-label">Court —</div>
+    <div class="alert-subtitle">Game Starting Now</div>
+    <div class="alert-players" id="alert-players"></div>
+    <button class="alert-close-btn" onclick="closeAlert()">Got it!</button>
+  </div>
+</div>
+
+<script>
+const LEVEL_SHORT = { 'Beginner':'BEG','Low-Int':'L-INT','Intermediate':'INT','High-Int':'H-INT','Advanced':'ADV' };
+const BADGE_CLASS = { 'Beginner':'badge-beg','Low-Int':'badge-li','Intermediate':'badge-int','High-Int':'badge-hi','Advanced':'badge-adv' };
+
+let courtsData = [];
+let gameTimeLimit = 20;
+let upNextData = [];
+
+function formatTimer(startTime, limitMin) {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const limit = limitMin * 60;
+  const rem = limit - elapsed;
+  const absRem = Math.abs(rem);
+  const min = Math.floor(absRem / 60).toString().padStart(2,'0');
+  const sec = (absRem % 60).toString().padStart(2,'0');
+  const cls = rem < 0 ? 'timer-over' : rem < 120 ? 'timer-warn' : 'timer-ok';
+  return { text: (rem < 0 ? '-' : '') + min + ':' + sec, cls };
+}
+
+function buildBadge(level) {
+  return '<span class="badge ' + (BADGE_CLASS[level]||'badge-beg') + '">' + (LEVEL_SHORT[level]||level) + '</span>';
+}
+
+function buildPlayerRow(p) {
+  return '<div class="player-row"><span class="player-name-big">' + p.name + '</span></div>';
+}
+
+function buildPlayerRowPreview(p) {
+  const LEVEL_BADGE = { 'Beginner':'badge-beg','Low-Int':'badge-li','Intermediate':'badge-int','High-Int':'badge-hi','Advanced':'badge-adv' };
+  const LEVEL_S = { 'Beginner':'BEG','Low-Int':'L-INT','Intermediate':'INT','High-Int':'H-INT','Advanced':'ADV' };
+  const genderTag = p.gender === 'F'
+    ? '<span style="font-size:11px;font-weight:800;color:#f06292;background:#2a0818;border:1px solid #e91e6344;border-radius:20px;padding:1px 6px;flex-shrink:0;">♀</span>'
+    : '<span style="font-size:11px;font-weight:800;color:#64b5f6;background:#0d2040;border:1px solid #2196f344;border-radius:20px;padding:1px 6px;flex-shrink:0;">♂</span>';
+  const lvlBadge = '<span class="badge ' + (LEVEL_BADGE[p.level]||'badge-beg') + '">' + (LEVEL_S[p.level]||p.level) + '</span>';
+  return '<div class="player-row" style="opacity:0.9;">' + genderTag + lvlBadge + '<span class="player-name-big" style="font-size:16px;">' + p.name + '</span></div>';
+}
+
+function renderCourts() {
+  const grid = document.getElementById('courts-grid');
+  grid.innerHTML = '';
+
+  // Active / open courts
+  courtsData.forEach(court => {
+    const card = document.createElement('div');
+    card.className = 'court-card ' + (court.players ? 'active' : 'open');
+
+    if (court.players) {
+      const { text, cls } = formatTimer(court.startTime, gameTimeLimit);
+      const teamAHTML = court.players.teamA.map(buildPlayerRow).join('');
+      const teamBHTML = court.players.teamB.map(buildPlayerRow).join('');
+      card.innerHTML =
+        '<div class="court-header">' +
+          '<div class="court-num"><span class="status-dot dot-green"></span>Court ' + court.id + '</div>' +
+          '<div class="timer ' + cls + '">' + text + '</div>' +
+        '</div>' +
+        '<div class="teams">' +
+          '<div class="team-a"><div class="team-label">Team A</div>' + teamAHTML + '</div>' +
+          '<div class="vs-divider">— VS —</div>' +
+          '<div class="team-b"><div class="team-label">Team B</div>' + teamBHTML + '</div>' +
+        '</div>';
+    } else {
+      card.innerHTML =
+        '<div class="court-header">' +
+          '<div class="court-num"><span class="status-dot dot-gray"></span>Court ' + court.id + '</div>' +
+          '<span style="font-size:11px;color:#2a4070;font-weight:700;letter-spacing:1px;">OPEN</span>' +
+        '</div>' +
+        '<div class="open-label">— Available —</div>';
+    }
+    grid.appendChild(card);
+  });
+
+  // Up Next cards
+  upNextData.forEach((m, idx) => {
+    if (!m || !m.teamA || !m.teamB) return;
+    const fCount = [...m.teamA, ...m.teamB].filter(p => p.gender === 'F').length;
+    const matchLabel = fCount === 2 ? '♀♂ Mixed Doubles' : fCount === 4 ? "♀ Women's Doubles" : "♂ Men's Doubles";
+    const teamAHTML = m.teamA.map(buildPlayerRowPreview).join('');
+    const teamBHTML = m.teamB.map(buildPlayerRowPreview).join('');
+    const card = document.createElement('div');
+    card.className = 'court-card up-next';
+    card.innerHTML =
+      '<div style="position:absolute;top:0;right:0;background:#1e3560;border-bottom-left-radius:6px;padding:2px 8px;font-size:9px;font-weight:800;color:#4a6a94;letter-spacing:1px;text-transform:uppercase;">Up Next ' + (idx + 1) + '</div>' +
+      '<div class="court-header">' +
+        '<div class="court-num" style="color:#4a6a94;"><span class="status-dot" style="background:#2a4070;"></span>Next Game ' + (idx + 1) + '</div>' +
+        '<span style="font-size:9px;font-weight:800;color:#4a6a94;letter-spacing:.5px;text-transform:uppercase;">' + matchLabel + '</span>' +
+      '</div>' +
+      '<div class="teams">' +
+        '<div class="team-a"><div class="team-label" style="color:#3a6a9a;">— TEAM A —</div>' + teamAHTML + '</div>' +
+        '<div class="vs-divider" style="color:#2a4070;">— VS —</div>' +
+        '<div class="team-b"><div class="team-label" style="color:#3a5a7a;">— TEAM B —</div>' + teamBHTML + '</div>' +
+      '</div>' +
+      '<div style="font-size:10px;color:#2a4070;text-align:center;margin-top:8px;font-style:italic;">preview · subject to change</div>';
+    grid.appendChild(card);
+  });
+}
+
+// Clock
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+// Re-render timers every second
+setInterval(renderCourts, 1000);
+
+// Listen for postMessage updates from opener — data comes as plain object now
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'DR_PREVIEW_UPDATE') {
+    try {
+      courtsData = e.data.courts || [];
+      gameTimeLimit = e.data.gameTime || 20;
+      upNextData = e.data.upNext || [];
+      const sn = document.getElementById('session-name');
+      if (sn) sn.textContent = e.data.sessionName || 'Live Court View';
+      renderCourts();
+    } catch(err) {}
+  }
+
+  // ── Game-starting alert overlay ──────────────────────────────────
+  if (e.data && e.data.type === 'DR_ALERT') {
+    try {
+      const { courtId, teamA, teamB } = e.data;
+      const allPlayers = [...(teamA || []), ...(teamB || [])];
+      document.getElementById('alert-court-label').textContent = 'Court ' + courtId;
+      document.getElementById('alert-players').innerHTML = allPlayers
+        .map(p => '<div class="alert-player-row"><span class="alert-pname">' + p.name + '</span></div>')
+        .join('');
+      const overlay = document.getElementById('alert-overlay');
+      overlay.classList.add('visible');
+      // Auto-dismiss after 12 seconds
+      if (window._alertTimer) clearTimeout(window._alertTimer);
+      window._alertTimer = setTimeout(() => overlay.classList.remove('visible'), 12000);
+    } catch(err) {}
+  }
+});
+
+function closeAlert() {
+  const overlay = document.getElementById('alert-overlay');
+  if (overlay) overlay.classList.remove('visible');
+  if (window._alertTimer) clearTimeout(window._alertTimer);
+}
+
+// Ask parent for data on load
+window.addEventListener('load', () => {
+  try { window.opener && window.opener.postMessage({ type: 'DR_PREVIEW_READY' }, '*'); } catch(e) {}
+});
+
+renderCourts();
+<\/script>
+</bo${""}dy>
+</html>`;
 
   const buildSnapshot = () => ({
     name: sessionName,
@@ -256,6 +1054,20 @@ function App() {
     setQueue(snap.queue || []);
     setHistory(snap.history || []);
     setCourts(snap.courts || Array.from({ length: snap.numCourts }, (_, i) => ({ id: i+1, players: null, startTime: null })));
+    // Rebuild pairing history from saved game history so repeat-avoidance is accurate
+    pairingHistory.current = {};
+    gamesPlayedRef.current = {};
+    joinRoundRef.current = {};
+    roundsFiredRef.current = 0;
+    olSameGenderStreak.current = 0;
+    (snap.history || []).forEach((g, idx) => {
+      phRecord(g.teamA, g.teamB);
+      [...g.teamA, ...g.teamB].forEach(p => {
+        if (joinRoundRef.current[p.id] === undefined) joinRoundRef.current[p.id] = idx;
+        gamesPlayedRef.current[p.id] = (gamesPlayedRef.current[p.id] || 0) + 1;
+      });
+      roundsFiredRef.current = idx + 1;
+    });
     localStorage.setItem('dr_current_session_name', JSON.stringify(snap.name));
     localStorage.setItem('dr_session_started', snap.startedAt);
     showNotif(`Loaded "${snap.name}"!`);
@@ -270,9 +1082,15 @@ function App() {
     setSessionStarted(now);
     setQueue([]);
     setHistory([]);
+    setPlayerList([]);
     setCourts(Array.from({ length: numCourts }, (_, i) => ({ id: i+1, players: null, startTime: null })));
     setManualCourt(null); setManualSelected([]);
     setScoreModal(null);
+    pairingHistory.current = {};
+    gamesPlayedRef.current = {};
+    joinRoundRef.current = {};
+    roundsFiredRef.current = 0;
+    olSameGenderStreak.current = 0;
     localStorage.setItem('dr_current_session_name', JSON.stringify(n));
     localStorage.setItem('dr_session_started', now);
     setLastSaved(null);
@@ -308,20 +1126,43 @@ function App() {
     });
   };
 
-  const teamCompatible = (tA, tB, mode) => {
-    if (mode === 'Mixed' || mode === 'Manual') return true;
+  // Gender validation: if any female is present, exactly 2 females required (1 per team = mixed doubles).
+  // Forbids 3M+1F, 4F alone vs 4M, or any combo where females are on same team.
+  // In 'Open Level' mode this check is skipped — any gender combination is allowed.
+  const genderValid = (tA, tB, mode) => {
+    if (mode === 'Open Level' || mode === 'Manual') return true; // Open Level = all levels, no gender restriction
     const all = [...tA, ...tB];
-    const levels = all.map(p => LEVEL_IDX[p.level]);
-    const span = Math.max(...levels) - Math.min(...levels);
+    const femaleCount = all.filter(p => p.gender === 'F').length;
+    if (femaleCount === 0 || femaleCount === 4) return true; // all-male or all-female: OK
+    if (femaleCount !== 2) return false; // 1F or 3F: NOT OK
+    // Exactly 2F: each team must have exactly 1F (mixed doubles)
+    const femalesInA = tA.filter(p => p.gender === 'F').length;
+    const femalesInB = tB.filter(p => p.gender === 'F').length;
+    return femalesInA === 1 && femalesInB === 1;
+  };
+
+  const teamCompatible = (tA, tB, mode) => {
+    if (!genderValid(tA, tB, mode)) return false;
+    if (mode === 'Open Level' || mode === 'Manual') return true;
+    const all = [...tA, ...tB];
+    // 'Open' level players are wildcards — ignore them in span calc
+    const levels = all.filter(p => p.level !== 'Open').map(p => LEVEL_IDX[p.level]);
+    if (levels.length < 2) return true; // all Open level players, always compatible
+    const minLvl = Math.min(...levels);
+    const maxLvl = Math.max(...levels);
+    const span = maxLvl - minLvl;
     if (mode === 'Same Level') return span === 0;
-    if (mode === 'Consecutive') return span <= 1;
+    if (mode === 'Skill Based') {
+      // Valid adjacent pairs: ADV↔H-INT, H-INT↔INT, INT↔L-INT, L-INT↔BEG
+      // BEG(0) and ADV(4) cannot be in the same game (span > 1)
+      return span <= 1;
+    }
     return true;
   };
 
   // Returns true if a 4-player group respects fixed-partner constraints.
-  // Mixed mode: no partner restrictions — any 4 players can share a court.
+  // Mixed mode: partners ARE respected — doubles pairs stay together on the same team.
   const partnersRespected = (tA, tB, mode) => {
-    if (mode === 'Mixed') return true;
     const allFour = [...tA, ...tB];
     for (const p of allFour) {
       if (!p.partnerId) continue;
@@ -345,85 +1186,563 @@ function App() {
     return a;
   };
 
-  const findMatch = (q, mode) => {
-    if (mode === 'Manual') return null;
+  // Given 4 players sorted by level (ascending), return balanced team split:
+  // strongest (idx 3) pairs with weakest (idx 0) → Team A
+  // two middles (idx 1 & 2) → Team B
+  // This ensures each team has a balanced skill spread rather than stacking.
+  // If players have fixed partner links, respect those over the balance rule.
+  const balancedTeams = (four) => {
+    // Check if any fixed partner pairs exist within these four
+    const pairIds = new Set(four.filter(p => p.partnerId).map(p => p.partnerId));
+    const hasPairs = four.some(p => p.partnerId && pairIds.has(p.id));
 
-    // Build a per-player game count from history so we can prioritise
-    // players who have played fewer games (fairness).
-    const gameCounts = {};
-    history.forEach(g => {
-      [...g.teamA, ...g.teamB].forEach(p => {
-        gameCounts[p.id] = (gameCounts[p.id] || 0) + 1;
-      });
-    });
-    // Also count players currently ON a court so they aren't double-penalised
-    // when they finish — they already waited while others played.
-    const getGames = (p) => gameCounts[p.id] || 0;
-
-    // Sort queue: fewest games first, break ties randomly so it feels natural.
-    const sorted = [...q].sort((a, b) => {
-      const diff = getGames(a) - getGames(b);
-      if (diff !== 0) return diff;
-      return Math.random() - 0.5; // random tiebreak
-    });
-
-    // Try to pick from the front of the sorted list first (fewest games).
-    // We still try all valid 4-player combos from sorted order so partner
-    // and level constraints can be satisfied, but we prefer those closest
-    // to the front (i.e. with the fewest games played).
-    for (let i = 0; i < sorted.length - 3; i++)
-    for (let j = i+1; j < sorted.length - 2; j++)
-    for (let k = j+1; k < sorted.length - 1; k++)
-    for (let l = k+1; l < sorted.length; l++) {
-      // Only allow combinations where the maximum individual game gap
-      // between any two of the 4 players is at most 2.  This prevents
-      // a high-game-count player from slipping in alongside three
-      // low-game-count players just to satisfy a level constraint,
-      // while still giving flexibility when the queue is small or
-      // constraints are tight.
-      const players = [sorted[i], sorted[j], sorted[k], sorted[l]];
-      const gameCts = players.map(getGames);
-      if (Math.max(...gameCts) - Math.min(...gameCts) > 2) continue;
-
-      const combos = shuffle([[0,1,2,3],[0,2,1,3],[0,3,1,2]]);
-      for (const [a,b,c,d] of combos) {
-        const tA = [players[a], players[b]], tB = [players[c], players[d]];
-        if (teamCompatible(tA, tB, mode) && partnersRespected(tA, tB, mode)) {
-          return { teamA: tA, teamB: tB, ids: players.map(p => p.id) };
+    if (hasPairs) {
+      // Respect fixed pairs: find the two partner pairs and put each on a team
+      const used = new Set();
+      const teams = [[], []];
+      for (const p of four) {
+        if (used.has(p.id)) continue;
+        const partner = four.find(x => x.id === p.partnerId && !used.has(x.id));
+        if (partner) {
+          const slot = teams[0].length <= teams[1].length ? 0 : 1;
+          teams[slot].push(p, partner);
+          used.add(p.id); used.add(partner.id);
         }
+      }
+      // Any unpaired players fill remaining slots
+      for (const p of four) {
+        if (!used.has(p.id)) {
+          const slot = teams[0].length < 2 ? 0 : 1;
+          teams[slot].push(p);
+          used.add(p.id);
+        }
+      }
+      if (teams[0].length === 2 && teams[1].length === 2) {
+        return { teamA: teams[0], teamB: teams[1] };
       }
     }
 
-    // Fallback: relax the game-gap constraint so we can always find a match
-    // when the queue is small or heavily constrained by level/partner rules.
-    for (let i = 0; i < sorted.length - 3; i++)
-    for (let j = i+1; j < sorted.length - 2; j++)
-    for (let k = j+1; k < sorted.length - 1; k++)
-    for (let l = k+1; l < sorted.length; l++) {
-      const players = [sorted[i], sorted[j], sorted[k], sorted[l]];
-      const combos = shuffle([[0,1,2,3],[0,2,1,3],[0,3,1,2]]);
-      for (const [a,b,c,d] of combos) {
-        const tA = [players[a], players[b]], tB = [players[c], players[d]];
-        if (teamCompatible(tA, tB, mode) && partnersRespected(tA, tB, mode)) {
-          return { teamA: tA, teamB: tB, ids: players.map(p => p.id) };
-        }
-      }
+    // Balanced split: sort by level, pair highest+lowest vs two middles
+    const byLevel = [...four].sort((a, b) => LEVEL_IDX[a.level] - LEVEL_IDX[b.level]);
+    // byLevel[0]=weakest, [1]=low-mid, [2]=high-mid, [3]=strongest
+    // Team A: strongest + weakest  |  Team B: two middles
+    return { teamA: [byLevel[3], byLevel[0]], teamB: [byLevel[2], byLevel[1]] };
+  };
+
+  // ── Skill Based matchmaking helpers ──────────────────────────────────
+  // Try all 3 unique splits of 4 players.
+  // wantMixed=true  → only accept splits with exactly 1F per team (mixed doubles)
+  // wantMixed=false → only accept splits that are all-M or all-F (same gender)
+  // wantMixed=null  → accept any valid split
+  const sbTrySplit = (players, wantMixed) => {
+    const splits = [[0,1,2,3],[0,2,1,3],[0,3,1,2]];
+    for (const [a,b,c,d] of splits) {
+      const tA = [players[a], players[b]], tB = [players[c], players[d]];
+      const fA = tA.filter(p => p.gender === 'F').length;
+      const fB = tB.filter(p => p.gender === 'F').length;
+      const total = fA + fB;
+      const isMixed = total === 2 && fA === 1 && fB === 1;
+      const isSameGender = total === 0 || total === 4;
+      if (wantMixed === true  && !isMixed) continue;
+      if (wantMixed === false && !isSameGender) continue;
+      // wantMixed===null means any valid pairing
+      if (!isMixed && !isSameGender) continue; // always reject 1F or 3F total
+      if (!partnersRespected(tA, tB, 'Skill Based')) continue;
+      return { teamA: tA, teamB: tB, ids: players.map(p => p.id) };
     }
     return null;
   };
 
-  const autoAssign = () => {
+  const findMatch = (q, mode, forceMixed = false, priorityIds = null) => {
+    if (mode === 'Manual') return null;
+
+    // Queue is already in registration/wait order — preserve it.
+    // If priorityIds provided (requested game), use exactly those 4 players.
+    let sorted = [...q];
+    if (priorityIds && priorityIds.length === 4) {
+      const pinned = priorityIds.map(id => q.find(p => p.id === id)).filter(Boolean);
+      if (pinned.length === 4) sorted = pinned;
+    }
+
+    // ── Freshness scoring ─────────────────────────────────────────────
+    // Collect ALL valid candidates then pick the one with the lowest
+    // repeat-pairing score. This mirrors PickleMixer's core logic:
+    // track every prior pairing and prefer combos that haven't been seen.
+    //
+    // To preserve queue-order fairness we only search combos that include
+    // the first available player (sorted[0]), so no one waits forever.
+    // For priorityIds we search all combos among those 4 only.
+    const pickBest = (candidates) => {
+      if (!candidates.length) return null;
+      let best = candidates[0], bestScore = scoreMatch(best.teamA, best.teamB);
+      for (let ci = 1; ci < candidates.length; ci++) {
+        const s = scoreMatch(candidates[ci].teamA, candidates[ci].teamB);
+        if (s < bestScore) { best = candidates[ci]; bestScore = s; }
+      }
+      return best;
+    };
+
+    // ── OPEN LEVEL MODE ───────────────────────────────────────────────
+    // Search the full queue (capped at 20 for performance).
+    // Scoring per combo:
+    //   1. Gender balance (1F per team if possible, gender rotation applied)
+    //   2. Level balance (minimize average level diff between teams)
+    //   3. Wait priority: worst queue position in the group — players who have
+    //      waited longer push their combo up. This prevents anyone getting stuck.
+    //   4. Pairing + opponent freshness (new faces preferred)
+    if (mode === 'Open Level') {
+      const pool = sorted.slice(0, 20);
+      const splits = [[0,1,2,3],[0,2,1,3],[0,3,1,2]];
+
+      // Queue position map: lower index = waited longer
+      const qpos = {};
+      sorted.forEach((p, i) => { qpos[p.id] = i; });
+
+      const levelBalance = (tA, tB) => {
+        const lvl = (p) => LEVEL_IDX[p.level] ?? 1;
+        const avgA = tA.reduce((s, p) => s + lvl(p), 0) / tA.length;
+        const avgB = tB.reduce((s, p) => s + lvl(p), 0) / tB.length;
+        return Math.abs(avgA - avgB);
+      };
+
+      // Worst (highest) queue position in the group — lower is better.
+      // This penalises combos that include someone who just joined or returned,
+      // naturally surfacing groups where everyone has waited a long time.
+      const worstQpos = (players) => Math.max(...players.map(p => qpos[p.id] ?? 999));
+
+      const bestSplitForCombo = (players) => {
+        const fc = players.filter(p => p.gender === 'F').length;
+        const candidates = [];
+        for (const [a,b,c,d] of splits) {
+          const tA = [players[a], players[b]], tB = [players[c], players[d]];
+          if (!partnersRespected(tA, tB, mode)) continue;
+          const fA = tA.filter(p => p.gender === 'F').length;
+          const isMixed  = fc === 2 && fA === 1;
+          const genderOk = (fc === 2 && isMixed) || fc === 0 || fc === 4;
+          const wantedGender = forceMixed ? (isMixed ? 0 : 1) : (isMixed ? 1 : 0);
+          const type = isMixed ? 'mixed' : fc === 4 ? 'womens' : fc === 0 ? 'mens' : 'uneven';
+          candidates.push({
+            teamA: tA, teamB: tB,
+            ids: players.map(p => p.id),
+            type, genderOk, wantedGender,
+            levelBal: levelBalance(tA, tB),
+            waitScore: worstQpos(players),
+            fresh: scoreMatch(tA, tB),
+          });
+        }
+        if (!candidates.length) return null;
+        candidates.sort((x, y) =>
+          (y.genderOk - x.genderOk) ||
+          (x.wantedGender - y.wantedGender) ||
+          (x.levelBal - y.levelBal) ||
+          (x.waitScore - y.waitScore) ||
+          (x.fresh - y.fresh)
+        );
+        return candidates[0];
+      };
+
+      const combos = [];
+      for (let i = 0; i < pool.length - 3; i++)
+      for (let j = i+1; j < pool.length - 2; j++)
+      for (let k = j+1; k < pool.length - 1; k++)
+      for (let l = k+1; l < pool.length; l++) {
+        const c = bestSplitForCombo([pool[i], pool[j], pool[k], pool[l]]);
+        if (c) combos.push(c);
+      }
+
+      if (!combos.length) return null;
+
+      combos.sort((x, y) =>
+        (y.genderOk - x.genderOk) ||
+        (x.wantedGender - y.wantedGender) ||
+        (x.levelBal - y.levelBal) ||
+        (x.waitScore - y.waitScore) ||
+        (x.fresh - y.fresh)
+      );
+
+      return combos[0];
+    }
+
+    // ── SAME LEVEL MODE ───────────────────────────────────────────────
+    if (mode === 'Same Level') {
+      const tryCombo = (players, isSameGenderOnly) => {
+        const femaleCount = players.filter(p => p.gender === 'F').length;
+        if (isSameGenderOnly && femaleCount !== 0 && femaleCount !== 4) return null;
+        const splits = [[0,1,2,3],[0,2,1,3],[0,3,1,2]];
+        let best = null, bestScore = Infinity;
+        for (const [a,b,c,d] of splits) {
+          const tA = [players[a], players[b]], tB = [players[c], players[d]];
+          if (teamCompatible(tA, tB, mode) && partnersRespected(tA, tB, mode)) {
+            const s = scoreMatch(tA, tB);
+            if (s < bestScore) { best = { teamA: tA, teamB: tB, ids: players.map(p => p.id) }; bestScore = s; }
+          }
+        }
+        return best;
+      };
+
+      // Collect all valid 4-player groups anchored to sorted[0]
+      const collectSameLevel = (isSameGenderOnly, requireMixed) => {
+        const candidates = [];
+        for (let i = 0; i < (priorityIds ? 1 : sorted.length - 3); i++)
+        for (let j = i+1; j < sorted.length - 2; j++)
+        for (let k = j+1; k < sorted.length - 1; k++)
+        for (let l = k+1; l < sorted.length; l++) {
+          const players = [sorted[i],sorted[j],sorted[k],sorted[l]];
+          if (requireMixed && players.filter(p=>p.gender==='F').length !== 2) continue;
+          const r = tryCombo(players, isSameGenderOnly);
+          if (r) candidates.push(r);
+        }
+        return candidates;
+      };
+
+      if (!forceMixed) {
+        const c = collectSameLevel(true, false);
+        if (c.length) return pickBest(c);
+      }
+      const c2 = collectSameLevel(false, forceMixed);
+      if (c2.length) return pickBest(c2);
+      if (forceMixed) {
+        const c3 = collectSameLevel(false, false);
+        if (c3.length) return pickBest(c3);
+      }
+      return null;
+    }
+
+    // ── SKILL BASED MODE ─────────────────────────────────────────────
+    // Priority stack:
+    //   1. Level span ≤ 1 (adjacent levels only; widens to ≤2 then any as fallback)
+    //   2. Join-adjusted deficit (same fairness metric as Open Level — who is most owed)
+    //   3. Max individual games (prevent any one player pulling far ahead)
+    //   4. Queue anchor — prefer combos that include the longest-waiting player
+    //      (soft, only breaks ties after fairness is satisfied)
+    //   5. Gender rotation (wantMixed preference, falls back gracefully)
+    //   6. Pairing freshness (final tiebreaker)
+    if (mode === 'Skill Based') {
+      const activeCount = Math.max(4, sorted.length);
+      const expectedRate = Math.min(1.0, 4 / activeCount);
+
+      const getDeficit = (p) => {
+        const joinRound = joinRoundRef.current[p.id] ?? 0;
+        const roundsAvailable = Math.max(0, roundsFiredRef.current - joinRound);
+        return (roundsAvailable * expectedRate) - (gamesPlayedRef.current[p.id] || 0);
+      };
+
+      const groupDeficit = (c) =>
+        [...c.teamA, ...c.teamB].reduce((sum, p) => sum + getDeficit(p), 0);
+
+      const maxIndividualGames = (c) =>
+        Math.max(...[...c.teamA, ...c.teamB].map(p => gamesPlayedRef.current[p.id] || 0));
+
+      // Collect all valid combos at a given level span and gender preference.
+      // wantMixed=true → mixed doubles only
+      // wantMixed=false → same-gender only
+      // wantMixed=null → either
+      const collectSB = (maxSpan, wantMixed) => {
+        const candidates = [];
+        for (let i = 0; i < sorted.length - 3; i++)
+        for (let j = i+1; j < sorted.length - 2; j++)
+        for (let k = j+1; k < sorted.length - 1; k++)
+        for (let l = k+1; l < sorted.length; l++) {
+          const players = [sorted[i], sorted[j], sorted[k], sorted[l]];
+          const idxs = players.map(p => LEVEL_IDX[p.level] < 0 ? 0 : LEVEL_IDX[p.level]);
+          if (Math.max(...idxs) - Math.min(...idxs) > maxSpan) continue;
+          const result = sbTrySplit(players, wantMixed);
+          if (result) candidates.push(result);
+        }
+        return candidates;
+      };
+
+      // Apply fairness filtering then pick best from a candidate pool.
+      // Returns null if pool is empty.
+      const pickFair = (candidates) => {
+        if (!candidates.length) return null;
+        const TOLERANCE = 0.05;
+
+        // Step 1: maximize group deficit (most owed a game, join-adjusted)
+        const maxDef = Math.max(...candidates.map(groupDeficit));
+        const fairPool = candidates.filter(c => groupDeficit(c) >= maxDef - TOLERANCE);
+
+        // Step 2: minimize max individual games
+        const minMax = Math.min(...fairPool.map(maxIndividualGames));
+        const balancedPool = fairPool.filter(c => maxIndividualGames(c) === minMax);
+
+        // Step 3: soft anchor — prefer combos containing sorted[0] (longest-waiting)
+        const withAnchor = balancedPool.filter(c =>
+          [...c.teamA, ...c.teamB].some(p => p.id === sorted[0].id));
+        const anchorPool = withAnchor.length ? withAnchor : balancedPool;
+
+        // Step 4: pairing freshness tiebreaker
+        return pickBest(anchorPool);
+      };
+
+      // Pass 1: span ≤ 1, desired gender
+      let result = pickFair(collectSB(1, forceMixed));
+      if (result) return result;
+
+      // Pass 2: span ≤ 1, opposite gender
+      result = pickFair(collectSB(1, !forceMixed));
+      if (result) return result;
+
+      // Pass 3: span ≤ 2, desired gender first, then opposite
+      result = pickFair(collectSB(2, forceMixed));
+      if (result) return result;
+      result = pickFair(collectSB(2, !forceMixed));
+      if (result) return result;
+
+      // Pass 4: any span, any gender
+      return pickFair(collectSB(99, null));
+    }
+
+    return null;
+  };
+
+  // ── Requested Games helpers ───────────────────────────────────────────
+  const addRequestedGame = (playerIds) => {
+    if (playerIds.length !== 4) return;
+    // Snapshot every OTHER player in the session right now (queue + on-court).
+    // The requested game only auto-fires after ALL of these players have had
+    // at least one game since this request was added — i.e. they've had their turn.
+    const allSessionIds = [
+      ...queue.map(p => p.id),
+      ...courts.flatMap(c => c.players ? [...c.players.teamA, ...c.players.teamB].map(p => p.id) : [])
+    ];
+    const otherPlayerIds = allSessionIds.filter(id => !playerIds.includes(id));
+    // For each other player, record their current game count as baseline.
+    // They've "had their turn" once their count exceeds this baseline.
+    // NOTE: Recompute stats fresh from history here — the render-time `playerStats`
+    // may be stale if called right after a score submission (state not yet flushed).
+    const freshStats = {};
+    history.forEach(g => {
+      [...g.teamA, ...g.teamB].forEach(p => {
+        if (!freshStats[p.id]) freshStats[p.id] = { games: 0 };
+        freshStats[p.id].games++;
+      });
+    });
+    const otherBaselines = {};
+    otherPlayerIds.forEach(id => {
+      otherBaselines[id] = freshStats[id]?.games || 0;
+    });
+    setRequestedGames(prev => [...prev, {
+      id: Date.now(),
+      playerIds,
+      addedAt: Date.now(),
+      otherBaselines, // { playerId: gamesAtRequestTime }
+    }]);
+    showNotif(`Requested game added! Fires after all ${otherPlayerIds.length} other players have had their turn.`);
+  };
+
+  const removeRequestedGame = (id) => {
+    setRequestedGames(prev => prev.filter(r => r.id !== id));
+  };
+
+  // ── Pair-link helpers (set/remove fixed partner on existing players) ──
+  const linkPartners = (idA, idB) => {
+    setQueue(prev => prev.map(p => {
+      if (p.id === idA) return { ...p, partnerId: idB };
+      if (p.id === idB) return { ...p, partnerId: idA };
+      return p;
+    }));
+    showNotif('Fixed pair linked!');
+  };
+
+  const unlinkPartner = (id) => {
+    setQueue(prev => {
+      const target = prev.find(p => p.id === id);
+      const partnerId = target?.partnerId;
+      return prev.map(p => {
+        if (p.id === id || p.id === partnerId) return { ...p, partnerId: null };
+        return p;
+      });
+    });
+    showNotif('Fixed pair removed.');
+  };
+
+  const autoAssign = (targetCourtId) => {
     if (matchMode === 'Manual') { showNotif('Switch to Auto mode or use Assign Manually on a court'); return; }
-    const open = courts.find(c => !c.players);
+    const open = targetCourtId
+      ? courts.find(c => c.id === targetCourtId && !c.players)
+      : courts.find(c => !c.players);
     if (!open) { showNotif('No open courts available'); return; }
     if (queue.length < 4) { showNotif('Need at least 4 players in queue'); return; }
-    const match = findMatch(queue, matchMode);
+
+    assignCount.current += 1;
+    let forceMixed = false;
+    if (matchMode === 'Same Level') {
+      forceMixed = assignCount.current % 3 === 0;
+    }
+    if (matchMode === 'Open Level') {
+      forceMixed = olSameGenderStreak.current >= 2;
+    }
+    if (matchMode === 'Skill Based') {
+      sbMixedCount.current += 1;
+      forceMixed = sbMixedCount.current % 3 === 0;
+    }
+
+    // Check if any readyToFire requested game has all 4 players already
+    // at the very front of the queue (no one waiting ahead of them is being
+    // skipped). We define "at the front" as: every one of the 4 players
+    // appears within the first (queuePosition + 3) slots — meaning no other
+    // players are ahead of the last of the 4. This prevents skipping players
+    // who registered or returned earlier.
+    let priorityIds = null;
+    let firedReqId = null;
+    for (const req of requestedGames) {
+      if (!req.readyToFire) continue;
+      const positions = req.playerIds.map(id => queue.findIndex(p => p.id === id));
+      if (positions.some(pos => pos === -1)) continue; // some not in queue yet
+      const maxPos = Math.max(...positions);
+      // Count how many queue members are NOT part of this requested game
+      // and sit BEFORE the last of the 4 players.
+      const othersAhead = queue.slice(0, maxPos).filter(p => !req.playerIds.includes(p.id)).length;
+      if (othersAhead === 0) {
+        // All 4 are at the front — no one is being skipped
+        priorityIds = req.playerIds;
+        firedReqId = req.id;
+        break;
+      }
+    }
+
+    const match = findMatch(queue, matchMode, forceMixed, priorityIds);
     if (!match) { showNotif(`No valid match found for "${matchMode}" mode`); return; }
     const { teamA, teamB, ids } = match;
     setCourts(prev => prev.map(c => c.id === open.id ? { ...c, players: { teamA, teamB }, startTime: Date.now() } : c));
     setQueue(prev => prev.filter(p => !ids.includes(p.id)));
-    showNotif(`Court ${open.id} — Game started!`);
+    if (firedReqId) setRequestedGames(prev => prev.filter(r => r.id !== firedReqId));
+    roundsFiredRef.current += 1;
+    const fCount = [...teamA, ...teamB].filter(p => p.gender === 'F').length;
+    const matchType = matchMode === 'Open Level'
+      ? 'Open Levels'
+      : fCount === 2 ? 'Mixed Doubles' : fCount === 4 ? "Women's Doubles" : "Men's Doubles";
+    const reqLabel = firedReqId ? '🎯 Requested ' : '';
+    showNotif(`Court ${open.id} — ${reqLabel}${matchType} started!`);
   };
+
+  // ── Start a specific requested game on an open court ─────────────────
+  // This is SEPARATE from Auto Assign. It pulls the 4 players from wherever
+  // they are (queue or just returned from court) and fills an open court.
+  // It does NOT touch the rest of the queue order at all.
+  const startRequestedGame = (req) => {
+    const open = courts.find(c => !c.players);
+    if (!open) { showNotif('No open courts — end a game first'); return; }
+    // Collect the 4 players from the queue
+    const players = req.playerIds.map(id => queue.find(p => p.id === id)).filter(Boolean);
+    if (players.length !== 4) {
+      showNotif('Not all 4 players are free in the queue yet'); return;
+    }
+    const [p1, p2, p3, p4] = players;
+    const teamA = [p1, p2], teamB = [p3, p4];
+    const ids = req.playerIds;
+    setCourts(prev => prev.map(c => c.id === open.id ? { ...c, players: { teamA, teamB }, startTime: Date.now() } : c));
+    setQueue(prev => prev.filter(p => !ids.includes(p.id)));
+    setRequestedGames(prev => prev.filter(r => r.id !== req.id));
+    roundsFiredRef.current += 1;
+    const fCount = players.filter(p => p.gender === 'F').length;
+    const matchType = fCount === 2 ? 'Mixed Doubles' : fCount === 4 ? "Women's Doubles" : "Men's Doubles";
+    showNotif(`Court ${open.id} — 🎯 Requested ${matchType} started!`);
+  };
+
+  // ── Test Simulation ──────────────────────────────────────────────────
+  const runSimulation = (targetGames) => {
+    if (matchMode === 'Manual') { showNotif('Switch to Auto mode to run simulation'); return; }
+    setSimModal(false);
+    setSimRunning(true);
+    setSimProgress(0);
+    setSimTarget(targetGames);
+
+    let localQueue = [...queue];
+    let localCourts = courts.map(c => ({ ...c }));
+    let localHistory = [...history];
+    let localAssignCount = assignCount.current;
+    let localSbMixedCount = sbMixedCount.current;
+    let localOlStreak = olSameGenderStreak.current;
+    let gamesCompleted = 0;
+
+    const step = () => {
+      if (gamesCompleted >= targetGames) {
+        setQueue(localQueue);
+        setCourts(localCourts);
+        setHistory(localHistory);
+        assignCount.current = localAssignCount;
+        sbMixedCount.current = localSbMixedCount;
+        olSameGenderStreak.current = localOlStreak;
+        setSimRunning(false);
+        setSimProgress(targetGames);
+        showNotif('Simulation done! ' + gamesCompleted + ' games completed.');
+        return;
+      }
+
+      // Fill all open courts
+      let filledAny = false;
+      for (let ci = 0; ci < localCourts.length; ci++) {
+        if (localCourts[ci].players) continue;
+        if (localQueue.length < 4) break;
+        localAssignCount += 1;
+        let forceMixed = false;
+        if (matchMode === 'Same Level') forceMixed = localAssignCount % 3 === 0;
+        if (matchMode === 'Open Level') forceMixed = localOlStreak >= 2;
+        if (matchMode === 'Skill Based') { localSbMixedCount += 1; forceMixed = localSbMixedCount % 3 === 0; }
+        const match = findMatch(localQueue.slice(0, 20), matchMode, forceMixed, null);
+        if (!match) break;
+        const { teamA, teamB, ids } = match;
+        localCourts[ci] = { ...localCourts[ci], players: { teamA, teamB }, startTime: Date.now() };
+        localQueue = localQueue.filter(p => !ids.includes(p.id));
+        filledAny = true;
+      }
+
+      // End games on all active courts with proper pickleball scores
+      let endedAny = false;
+      for (let ci = 0; ci < localCourts.length; ci++) {
+        if (!localCourts[ci].players || gamesCompleted >= targetGames) continue;
+        const { teamA, teamB } = localCourts[ci].players;
+        // Generate a realistic pickleball score: winner gets 11, loser gets 0-10
+        // If loser gets 10, winner must get 12 (win by 2)
+        const loserScore = Math.floor(Math.random() * 11); // 0–10
+        const winnerScore = loserScore === 10 ? 12 : 11;
+        const teamAWins = Math.random() < 0.5;
+        const sA = teamAWins ? winnerScore : loserScore;
+        const sB = teamAWins ? loserScore : winnerScore;
+        const winner = sA > sB ? 'A' : 'B';
+        localHistory.push({
+          id: Date.now() + ci + gamesCompleted,
+          courtId: localCourts[ci].id,
+          teamA, teamB, scoreA: sA, scoreB: sB, winner,
+          duration: Math.floor(Math.random() * 10) + gameTime - 5,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        localQueue = [...localQueue, ...teamA, ...teamB];
+        // Track games played for fairness scoring
+        [...teamA, ...teamB].forEach(p => {
+          gamesPlayedRef.current[p.id] = (gamesPlayedRef.current[p.id] || 0) + 1;
+          
+        });
+        // Update Open Level gender streak
+        if (matchMode === 'Open Level') {
+          const fCount = [...teamA, ...teamB].filter(p => p.gender === 'F').length;
+          const isMixed = fCount === 2;
+          localOlStreak = isMixed ? 0 : localOlStreak + 1;
+        }
+        localCourts[ci] = { ...localCourts[ci], players: null, startTime: null };
+        gamesCompleted++;
+        endedAny = true;
+      }
+
+      setSimProgress(gamesCompleted);
+
+      if (!filledAny && !endedAny) {
+        setQueue(localQueue);
+        setCourts(localCourts);
+        setHistory(localHistory);
+        setSimRunning(false);
+        showNotif('Simulation stopped at ' + gamesCompleted + ' — no valid match found.');
+        return;
+      }
+
+      setTimeout(step, 0);
+    };
+
+    setTimeout(step, 50);
+  };
+  // ─────────────────────────────────────────────────────────────────────
 
   const startManual = (courtId) => { setManualCourt(courtId); setManualSelected([]); };
 
@@ -438,12 +1757,22 @@ function App() {
   const confirmManual = () => {
     if (manualSelected.length !== 4) { showNotif('Select exactly 4 players'); return; }
     const [p1, p2, p3, p4] = manualSelected;
+    const tA = [p1, p2], tB = [p3, p4];
+    if (!genderValid(tA, tB, matchMode)) {
+      showNotif('❌ Invalid gender mix! If a female is present, each team must have exactly 1 female (mixed doubles only).');
+      return;
+    }
     const ids = manualSelected.map(p => p.id);
     setCourts(prev => prev.map(c => c.id === manualCourt
-      ? { ...c, players: { teamA: [p1,p2], teamB: [p3,p4] }, startTime: Date.now() } : c));
+      ? { ...c, players: { teamA: tA, teamB: tB }, startTime: Date.now() } : c));
     setQueue(prev => prev.filter(p => !ids.includes(p.id)));
     setManualCourt(null); setManualSelected([]);
-    showNotif(`Court ${manualCourt} started (manual)!`);
+    roundsFiredRef.current += 1;
+    const fCntM = [...tA, ...tB].filter(p => p.gender === 'F').length;
+    const matchTypeM = matchMode === 'Open Level'
+      ? 'Open Levels'
+      : fCntM === 2 ? 'Mixed Doubles' : fCntM === 4 ? "Women's Doubles" : "Men's Doubles";
+    showNotif(`Court ${manualCourt} — ${matchTypeM} started!`);
   };
 
   const endGame = (courtId) => {
@@ -455,36 +1784,218 @@ function App() {
     setScoreA(''); setScoreB('');
   };
 
+  // Swap two players on a court (used during live rearrange)
+  const swapCourtPlayers = (courtId, idA, idB) => {
+    setCourts(prev => prev.map(c => {
+      if (c.id !== courtId || !c.players) return c;
+      const allPlayers = [...c.players.teamA, ...c.players.teamB];
+      const pA = allPlayers.find(p => p.id === idA);
+      const pB = allPlayers.find(p => p.id === idB);
+      if (!pA || !pB) return c;
+      const newTeamA = c.players.teamA.map(p => p.id === idA ? pB : p.id === idB ? pA : p);
+      const newTeamB = c.players.teamB.map(p => p.id === idA ? pB : p.id === idB ? pA : p);
+      return { ...c, players: { teamA: newTeamA, teamB: newTeamB } };
+    }));
+  };
+
+  // Replace a player on a court with a player from the queue.
+  // The removed player goes back to the front of the queue (they just sat down).
+  const replaceCourtPlayer = (courtId, outPlayerId, inPlayer) => {
+    const court = courts.find(c => c.id === courtId);
+    if (!court?.players) return;
+    const allOnCourt = [...court.players.teamA, ...court.players.teamB];
+    const outPlayer = allOnCourt.find(p => p.id === outPlayerId);
+
+    setCourts(prev => prev.map(c => {
+      if (c.id !== courtId || !c.players) return c;
+      const newTeamA = c.players.teamA.map(p => p.id === outPlayerId ? inPlayer : p);
+      const newTeamB = c.players.teamB.map(p => p.id === outPlayerId ? inPlayer : p);
+      return { ...c, players: { teamA: newTeamA, teamB: newTeamB } };
+    }));
+    // Remove replacement from queue; put removed player at front so they're next up
+    setQueue(prev => {
+      const withoutIn = prev.filter(p => p.id !== inPlayer.id);
+      return outPlayer ? [outPlayer, ...withoutIn] : withoutIn;
+    });
+    setReplacingPlayer(null);
+    showNotif(`${inPlayer.name} subbed in for ${outPlayer?.name || 'player'}!`);
+  };
+
+  // Auto-remove a player from an active court and fill the slot using
+  // the same pairing-score algorithm. The removed player goes front of queue.
+  const autoRemoveAndReplace = (courtId, outPlayerId) => {
+    const court = courts.find(c => c.id === courtId);
+    if (!court?.players) return;
+    if (queue.length === 0) { showNotif('No players in queue to replace with!'); return; }
+
+    const allOnCourt = [...court.players.teamA, ...court.players.teamB];
+    const outPlayer = allOnCourt.find(p => p.id === outPlayerId);
+    if (!outPlayer) return;
+
+    const inTeamA = court.players.teamA.some(p => p.id === outPlayerId);
+    const remainingTeamA = court.players.teamA.filter(p => p.id !== outPlayerId);
+    const remainingTeamB = court.players.teamB.filter(p => p.id !== outPlayerId);
+
+    // Try each queue candidate; pick lowest pairing-history score
+    // that also passes gender validation for the current mode
+    let bestCandidate = null;
+    let bestScore = Infinity;
+
+    for (const candidate of queue) {
+      const proposedTeamA = inTeamA ? [...remainingTeamA, candidate] : remainingTeamA;
+      const proposedTeamB = inTeamA ? remainingTeamB : [...remainingTeamB, candidate];
+      if (!genderValid(proposedTeamA, proposedTeamB, matchMode)) continue;
+      const score = scoreMatch(proposedTeamA, proposedTeamB);
+      if (score < bestScore) { bestScore = score; bestCandidate = candidate; }
+    }
+
+    // Fallback: no gender-valid candidate found, just use first in queue
+    if (!bestCandidate) bestCandidate = queue[0];
+
+    setCourts(prev => prev.map(c => {
+      if (c.id !== courtId || !c.players) return c;
+      const newTeamA = c.players.teamA.map(p => p.id === outPlayerId ? bestCandidate : p);
+      const newTeamB = c.players.teamB.map(p => p.id === outPlayerId ? bestCandidate : p);
+      return { ...c, players: { teamA: newTeamA, teamB: newTeamB } };
+    }));
+
+    setQueue(prev => {
+      const withoutIn = prev.filter(p => p.id !== bestCandidate.id);
+      return outPlayer ? [outPlayer, ...withoutIn] : withoutIn;
+    });
+    setReplacingPlayer(null);
+    const msg = 'Auto-filled: ' + bestCandidate.name + ' in for ' + outPlayer.name + '!';
+    showNotif(msg);
+  };
+
   const submitScore = () => {
     if (!scoreModal) return;
-    const sA = parseInt(scoreA) || 0, sB = parseInt(scoreB) || 0;
+    const sA = scoringEnabled ? (parseInt(scoreA) || 0) : 0;
+    const sB = scoringEnabled ? (parseInt(scoreB) || 0) : 0;
     const { courtId, startTime } = scoreModal;
     const duration = startTime ? Math.floor((Date.now() - startTime) / 60000) : 0;
     const winner = sA > sB ? 'A' : sB > sA ? 'B' : 'tie';
-    setHistory(prev => [...prev, {
+
+    // Record pairings BEFORE updating state so history is live for next findMatch
+    phRecord(modalTeamA, modalTeamB);
+    // Record last-played timestamp and games count
+    const finishTime = Date.now();
+    [...modalTeamA, ...modalTeamB].forEach(p => {
+      
+      gamesPlayedRef.current[p.id] = (gamesPlayedRef.current[p.id] || 0) + 1;
+    });
+    // Update Open Level gender streak
+    if (matchMode === 'Open Level') {
+      const fCount = [...modalTeamA, ...modalTeamB].filter(p => p.gender === 'F').length;
+      const isMixed = fCount === 2;
+      olSameGenderStreak.current = isMixed ? 0 : olSameGenderStreak.current + 1;
+    }
+
+    const returningPlayers = [...modalTeamA, ...modalTeamB];
+
+    const newHistEntry = {
       id: Date.now(), courtId, teamA: modalTeamA, teamB: modalTeamB,
       scoreA: sA, scoreB: sB, winner, duration,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }]);
-    setQueue(prev => [...prev, ...modalTeamA, ...modalTeamB]);
+    };
+    const updatedHistory = [...history, newHistEntry];
+
+    // Recompute playerStats with this game included
+    const updatedStats = {};
+    updatedHistory.forEach(g => {
+      const all = [...g.teamA.map(p => ({...p, team:'A'})), ...g.teamB.map(p => ({...p, team:'B'}))];
+      all.forEach(({ id, name, level, team }) => {
+        if (!updatedStats[id]) updatedStats[id] = { name, level, games: 0, wins: 0 };
+        updatedStats[id].games++;
+        const won = (team==='A' && g.winner==='A') || (team==='B' && g.winner==='B');
+        if (won) updatedStats[id].wins++;
+      });
+    });
+
+    const updatedQueue = [...queue, ...returningPlayers];
+
+    // Check if any requested game's "all others played" condition is now met.
+    // When it is, mark it readyToFire — but do NOT steal a court or skip the queue.
+    // The 4 players remain in the queue at their natural positions and will be
+    // grouped together by autoAssign when it's genuinely their turn.
+    const nowReadyIds = new Set();
+    if (matchMode !== 'Manual') {
+      for (const req of requestedGames) {
+        if (req.readyToFire) continue; // already marked
+        const othersDone = Object.entries(req.otherBaselines || {}).every(([id, baseline]) => {
+          return (updatedStats[id]?.games || 0) > baseline;
+        });
+        if (othersDone) nowReadyIds.add(req.id);
+      }
+    }
+
+    setHistory(updatedHistory);
+    setQueue(updatedQueue);
     setCourts(prev => prev.map(c => c.id === courtId ? { ...c, players: null, startTime: null } : c));
     setScoreModal(null);
-    showNotif(`Court ${courtId} — Game recorded!`);
+
+    if (nowReadyIds.size > 0) {
+      setRequestedGames(prev => prev.map(r =>
+        nowReadyIds.has(r.id) ? { ...r, readyToFire: true } : r
+      ));
+      showNotif(`Court ${courtId} — Game recorded! 🎯 Requested game is now ready — fires when these players reach the front of the queue.`);
+    } else {
+      showNotif(`Court ${courtId} — Game recorded!`);
+    }
+
+    // Auto-save after every game
+    setTimeout(() => {
+      const snap = { ...buildSnapshot(), name: sessionName };
+      const updated = savedSessions.filter(s => s.name !== snap.name).concat(snap);
+      setSavedSessions(updated);
+      localStorage.setItem('dr_saved_sessions', JSON.stringify(updated));
+      localStorage.setItem('dr_current_session_name', JSON.stringify(snap.name));
+      localStorage.setItem('dr_session_started', sessionStarted);
+      setLastSaved(new Date());
+    }, 0);
   };
 
   const addPlayer = () => {
     if (!newName.trim()) return;
+    // Check for duplicate name in queue
+    const allCurrentNames = new Set([
+      ...queue.map(p => p.name.toLowerCase()),
+      ...courts.flatMap(c => c.players ? [...c.players.teamA, ...c.players.teamB].map(p => p.name.toLowerCase()) : [])
+    ]);
+    if (allCurrentNames.has(newName.trim().toLowerCase())) {
+      showNotif(`"${newName.trim()}" is already in the session`); return;
+    }
     if (addingPair) {
       if (!newPartnerName.trim()) { showNotif('Enter partner name too'); return; }
+      if (allCurrentNames.has(newPartnerName.trim().toLowerCase())) {
+        showNotif(`"${newPartnerName.trim()}" is already in the session`); return;
+      }
+      if (newName.trim().toLowerCase() === newPartnerName.trim().toLowerCase()) {
+        showNotif('Partner must have a different name'); return;
+      }
       const id1 = uid(), id2 = uid();
-      const p1 = { id: id1, name: newName.trim(), level: newLevel, partnerId: id2 };
-      const p2 = { id: id2, name: newPartnerName.trim(), level: newPartnerLevel, partnerId: id1 };
+      const p1 = { id: id1, name: newName.trim(), level: newLevel, gender: newGender, partnerId: id2 };
+      const p2 = { id: id2, name: newPartnerName.trim(), level: newPartnerLevel, gender: newPartnerGender, partnerId: id1 };
+      // Record join round for late-arrival fairness (only set once, never overwritten)
+      if (joinRoundRef.current[id1] === undefined) joinRoundRef.current[id1] = roundsFiredRef.current;
+      if (joinRoundRef.current[id2] === undefined) joinRoundRef.current[id2] = roundsFiredRef.current;
       setQueue(prev => [...prev, p1, p2]);
+      setPlayerList(prev => {
+        const names = new Set(prev.map(p => p.name.toLowerCase()));
+        const toAdd = [p1, p2].filter(p => !names.has(p.name.toLowerCase()));
+        return [...prev, ...toAdd];
+      });
       setNewName(''); setNewPartnerName('');
       showNotif(`${p1.name} & ${p2.name} added as a fixed pair!`);
     } else {
-      const p = { id: uid(), name: newName.trim(), level: newLevel, partnerId: null };
+      const p = { id: uid(), name: newName.trim(), level: newLevel, gender: newGender, partnerId: null };
+      // Record join round for late-arrival fairness (only set once, never overwritten)
+      if (joinRoundRef.current[p.id] === undefined) joinRoundRef.current[p.id] = roundsFiredRef.current;
       setQueue(prev => [...prev, p]);
+      setPlayerList(prev => {
+        if (prev.some(x => x.name.toLowerCase() === p.name.toLowerCase())) return prev;
+        return [...prev, p];
+      });
       setNewName('');
       showNotif(`${p.name} added to waitlist!`);
     }
@@ -504,6 +2015,100 @@ function App() {
     });
   };
 
+  const exportWaitlistXLSX = () => {
+    if (!window.XLSX) { showNotif('Excel library not loaded yet, try again'); return; }
+    const rows = queue.map((p, i) => {
+      const partner = p.partnerId ? queue.find(x => x.id === p.partnerId) : null;
+      return {
+        '#': i + 1,
+        Name: p.name,
+        Level: p.level,
+        Gender: p.gender === 'M' ? 'Male' : 'Female',
+        'Fixed Partner': partner ? partner.name : '',
+        'Games Played': playerStats[p.id]?.games || 0,
+      };
+    });
+    const ws = window.XLSX.utils.json_to_sheet(rows);
+    // Column widths
+    ws['!cols'] = [{ wch: 4 }, { wch: 20 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 12 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Waitlist');
+    const date = new Date().toISOString().slice(0, 10);
+    window.XLSX.writeFile(wb, `waitlist_${date}.xlsx`);
+    showNotif(`Exported ${rows.length} players to Excel!`);
+  };
+
+  const importWaitlistXLSX = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!window.XLSX) { showNotif('Excel library not loaded yet, try again'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = window.XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = window.XLSX.utils.sheet_to_json(ws);
+        if (!rows.length) { showNotif('No data found in file'); return; }
+
+        // Build a name→id map for resolving fixed partners
+        const nameToId = {};
+        const newPlayers = rows.map(row => {
+          const id = uid();
+          const name = (row['Name'] || row['name'] || '').toString().trim();
+          if (name) nameToId[name.toLowerCase()] = id;
+          return {
+            id,
+            name: name || 'Unknown',
+            level: LEVELS.includes(row['Level'] || row['level']) ? (row['Level'] || row['level']) : 'Beginner',
+            gender: (row['Gender'] || row['gender'] || '').toString().toLowerCase().startsWith('f') ? 'F' : 'M',
+            _partnerName: (row['Fixed Partner'] || row['fixed partner'] || '').toString().trim().toLowerCase(),
+            partnerId: null,
+          };
+        }).filter(p => p.name && p.name !== 'Unknown');
+
+        // Resolve partner links by name
+        newPlayers.forEach(p => {
+          if (p._partnerName) {
+            const partnerId = nameToId[p._partnerName];
+            if (partnerId) p.partnerId = partnerId;
+          }
+          delete p._partnerName;
+        });
+
+        setQueue(prev => {
+          // Avoid duplicates by name (case-insensitive)
+          const existingNames = new Set(prev.map(p => p.name.toLowerCase()));
+          const fresh = newPlayers.filter(p => !existingNames.has(p.name.toLowerCase()));
+          // Record join round for each newly added player
+          fresh.forEach(p => { if (joinRoundRef.current[p.id] === undefined) joinRoundRef.current[p.id] = roundsFiredRef.current; });
+          return [...prev, ...fresh];
+        });
+        // Also add to master playerList
+        setPlayerList(prev => {
+          const existingNames = new Set(prev.map(p => p.name.toLowerCase()));
+          const fresh = newPlayers.filter(p => !existingNames.has(p.name.toLowerCase()));
+          return [...prev, ...fresh];
+        });
+        showNotif(`Imported ${newPlayers.length} players from Excel!`);
+      } catch (err) {
+        showNotif('Failed to read file — check format');
+      }
+    };
+    reader.readAsBinaryString(file);
+    // Reset input so the same file can be re-imported
+    e.target.value = '';
+  };
+
+  const renamePlayer = (id, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setQueue(prev => prev.map(p => p.id === id ? { ...p, name: trimmed, level: editingPlayerLevel } : p));
+    setEditingPlayerId(null);
+    setEditingPlayerName('');
+    setEditingPlayerLevel('Beginner');
+    showNotif(`Player updated to "${trimmed}"`);
+  };
+
   // Stats
   const activeCourts = courts.filter(c => c.players).length;
   const openCourts = courts.filter(c => !c.players).length;
@@ -512,8 +2117,8 @@ function App() {
   const playerStats = {};
   history.forEach(g => {
     const all = [...g.teamA.map(p => ({...p, team:'A'})), ...g.teamB.map(p => ({...p, team:'B'}))];
-    all.forEach(({ id, name, level, team }) => {
-      if (!playerStats[id]) playerStats[id] = { name, level, games: 0, wins: 0, pts: 0, against: 0 };
+    all.forEach(({ id, name, level, gender, team }) => {
+      if (!playerStats[id]) playerStats[id] = { name, level, gender, games: 0, wins: 0, pts: 0, against: 0 };
       playerStats[id].games++;
       const won = (team==='A' && g.winner==='A') || (team==='B' && g.winner==='B');
       if (won) playerStats[id].wins++;
@@ -590,6 +2195,19 @@ function App() {
           <button className="btn btn-ghost btn-sm" onClick={() => setSessionModal('load')} title="Load a saved session">📂 Load</button>
           <button className="btn btn-teal btn-sm" onClick={() => saveSession()} title="Save current session">💾 Save</button>
           <button className="btn btn-gold btn-sm" onClick={() => { setNewSessionName(''); setSessionModal('new'); }} title="Start a fresh session">＋ New Session</button>
+          <button className="btn btn-sm" onClick={openPreviewWindow} title="Open TV/display preview in a new window" style={{background:'#7c3aed',color:'#fff',border:'none'}}>📺 Preview Screen</button>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,fontWeight:600,color:autoAlert?'var(--gold)':'var(--text-muted)',background:autoAlert?'var(--gold-dim)':'var(--surface3)',border:`1px solid ${autoAlert?'#ffd60055':'var(--border)'}`,borderRadius:6,padding:'5px 10px',transition:'all 0.15s',whiteSpace:'nowrap'}} title="Show a popup with player names whenever a game starts">
+            <input type="checkbox" checked={autoAlert} onChange={e => setAutoAlert(e.target.checked)} style={{accentColor:'var(--gold)',width:13,height:13,cursor:'pointer'}} />
+            🔔 Auto Alert
+          </label>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,fontWeight:600,color:scoringEnabled?'var(--green)':'var(--text-muted)',background:scoringEnabled?'var(--green-dim)':'var(--surface3)',border:`1px solid ${scoringEnabled?'#00c85355':'var(--border)'}`,borderRadius:6,padding:'5px 10px',transition:'all 0.15s',whiteSpace:'nowrap'}} title="When enabled, prompts for score entry when a match ends">
+            <input type="checkbox" checked={scoringEnabled} onChange={e => setScoringEnabled(e.target.checked)} style={{accentColor:'var(--green)',width:13,height:13,cursor:'pointer'}} />
+            🏆 Scoring
+          </label>
+          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,fontWeight:600,color:showUpNext?'var(--blue)':'var(--text-muted)',background:showUpNext?'var(--blue-dim)':'var(--surface3)',border:`1px solid ${showUpNext?'var(--blue)':'var(--border)'}`,borderRadius:6,padding:'5px 10px',transition:'all 0.15s',whiteSpace:'nowrap'}} title="Preview the next matches from the queue">
+            <input type="checkbox" checked={showUpNext} onChange={e => setShowUpNext(e.target.checked)} style={{accentColor:'var(--blue)',width:13,height:13,cursor:'pointer'}} />
+            👁 Up Next
+          </label>
         </div>
       </div>
 
@@ -636,6 +2254,7 @@ function App() {
           ))}
         </div>
         <button className="btn btn-green btn-sm" style={{marginLeft:'auto'}} onClick={autoAssign}>▶ Auto Assign</button>
+        <button className="btn btn-sm" style={{background:'#7c3aed',color:'#fff'}} onClick={() => { setSimGames('96'); setSimModal(true); }} title="Run automated game simulation">🧪 Test Sim</button>
       </div>
 
       {/* TABS */}
@@ -643,6 +2262,8 @@ function App() {
         {[
           ['courts', `Courts (${numCourts})`],
           ['queue', `Waitlist (${queue.length})`],
+          ['playerlist', `Player List (${playerList.length})`],
+          ['requests', `Requested (${requestedGames.length})`],
           ['history', `History (${history.length})`],
           ['stats', 'Player Stats'],
         ].map(([key, label]) => (
@@ -661,35 +2282,221 @@ function App() {
                   Court {court.id}
                 </span>
                 {court.players
-                  ? <CourtTimer startTime={court.startTime} limitMin={gameTime} />
+                  ? <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
+                      <CourtTimer startTime={court.startTime} limitMin={gameTime} />
+                      {(() => {
+                        const all = [...court.players.teamA, ...court.players.teamB];
+                        const fCount = all.filter(p => p.gender === 'F').length;
+                        if (matchMode === 'Open Level') return <span style={{fontSize:9,fontWeight:800,color:'var(--gold)',letterSpacing:.5,textTransform:'uppercase'}}>⚡ Open Levels</span>;
+                        if (fCount === 2) return <span style={{fontSize:9,fontWeight:800,color:'#f06292',letterSpacing:.5,textTransform:'uppercase'}}>♀♂ Mixed Doubles</span>;
+                        if (fCount === 4) return <span style={{fontSize:9,fontWeight:800,color:'#f06292',letterSpacing:.5,textTransform:'uppercase'}}>♀ Women's Doubles</span>;
+                        return <span style={{fontSize:9,fontWeight:800,color:'#64b5f6',letterSpacing:.5,textTransform:'uppercase'}}>♂ Men's Doubles</span>;
+                      })()}
+                    </div>
                   : <span style={{fontSize:11,color:'var(--text-dim)'}}>OPEN</span>
                 }
               </div>
 
               {court.players ? (
                 <>
-                  <div className="team-divider">— TEAM A —</div>
-                  {court.players.teamA.map(p => (
-                    <div key={p.id} className="player-slot">
-                      <LevelBadge level={p.level} />
-                      <span className="player-name">{p.name}</span>
-                      {p.partnerId && court.players.teamA.find(x => x.id === p.partnerId) && (
-                        <span style={{fontSize:9,color:'#ce93d8'}}>🔗</span>
-                      )}
+                  {/* Rearrange mode toggle hint */}
+                  {rearrangeCourt === court.id ? (
+                    <div style={{fontSize:11,color:'var(--gold)',fontWeight:700,textAlign:'center',background:'var(--gold-dim)',borderRadius:6,padding:'5px 8px',border:'1px solid var(--gold)55',marginBottom:2}}>
+                      ↕ Drag players to swap · <button onClick={() => { setRearrangeCourt(null); setDragPlayerId(null); }} style={{background:'none',border:'none',color:'var(--gold)',cursor:'pointer',fontWeight:800,fontSize:11,padding:0,textDecoration:'underline'}}>Done</button>
                     </div>
+                  ) : null}
+
+                  {/* Render teams — draggable when rearrange mode is on */}
+                  {[
+                    { label: '— TEAM A —', players: court.players.teamA, team: 'A' },
+                    { label: '— VS —', players: null },
+                    { label: '— TEAM B —', players: court.players.teamB, team: 'B' },
+                  ].map((section, si) => (
+                    section.players === null
+                      ? (() => {
+                          // Show opponent repeat count between teams
+                          const oppRepeats = court.players.teamA.flatMap(pA =>
+                            court.players.teamB.map(pB => phGet(pA.id, pB.id))
+                          ).reduce((a,b) => a+b, 0);
+                          return (
+                            <div key="vs" className="team-divider" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                              — VS —
+                              {oppRepeats > 0 && (
+                                <span title={`These 4 have faced each other ${oppRepeats} time${oppRepeats!==1?'s':''} before`}
+                                  style={{fontSize:9,fontWeight:800,background:'var(--orange-dim)',color:'var(--orange)',borderRadius:10,padding:'1px 5px',border:'1px solid var(--orange)44'}}>
+                                  ×{oppRepeats}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()
+                      : <React.Fragment key={section.team}>
+                          <div className="team-divider" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                            {section.label}
+                            {(() => {
+                              const [p0, p1] = section.players;
+                              if (!p0 || !p1) return null;
+                              const partnerRepeats = phGet(p0.id, p1.id);
+                              return partnerRepeats > 0
+                                ? <span title={`${p0.name} & ${p1.name} have been partners ${partnerRepeats} time${partnerRepeats!==1?'s':''} before`}
+                                    style={{fontSize:9,fontWeight:800,background:'var(--blue-dim)',color:'var(--blue)',borderRadius:10,padding:'1px 5px',border:'1px solid var(--blue)44'}}>
+                                    🔁×{partnerRepeats}
+                                  </span>
+                                : null;
+                            })()}
+                          </div>
+                          {section.players.map(p => {
+                            const isBeingDragged = dragPlayerId === p.id;
+                            const isRearranging = rearrangeCourt === court.id;
+                            const isDropTarget = isRearranging && dragPlayerId && dragPlayerId !== p.id;
+                            const isBeingReplaced = replacingPlayer?.courtId === court.id && replacingPlayer?.playerId === p.id;
+                            return (
+                              <React.Fragment key={p.id}>
+                                <div
+                                  className="player-slot"
+                                  draggable={isRearranging}
+                                  onDragStart={isRearranging ? () => setDragPlayerId(p.id) : undefined}
+                                  onDragEnd={isRearranging ? () => setDragPlayerId(null) : undefined}
+                                  onDragOver={isDropTarget ? (e) => e.preventDefault() : undefined}
+                                  onDrop={isDropTarget ? (e) => {
+                                    e.preventDefault();
+                                    swapCourtPlayers(court.id, dragPlayerId, p.id);
+                                    setDragPlayerId(null);
+                                  } : undefined}
+                                  onClick={!isRearranging && !replacingPlayer ? () => setRearrangeCourt(court.id) : undefined}
+                                  title={!isRearranging ? 'Click to rearrange players' : isDropTarget ? `Swap with ${p.name}` : 'Drag me'}
+                                  style={{
+                                    cursor: isRearranging ? (isBeingDragged ? 'grabbing' : 'grab') : 'pointer',
+                                    opacity: isBeingDragged ? 0.45 : 1,
+                                    border: isBeingReplaced
+                                      ? '2px dashed var(--red)'
+                                      : isDropTarget
+                                        ? '2px dashed var(--gold)'
+                                        : isRearranging
+                                          ? '1px dashed var(--teal)'
+                                          : undefined,
+                                    background: isBeingReplaced ? 'var(--red-dim)' : undefined,
+                                    transition: 'border 0.15s, opacity 0.15s, background 0.15s',
+                                    userSelect: 'none',
+                                  }}
+                                >
+                                  <GenderTag gender={p.gender} />
+                                  <LevelBadge level={p.level} />
+                                  <span className="player-name" style={{color: isBeingReplaced ? 'var(--red)' : undefined}}>{p.name}</span>
+                                  {p.partnerId && section.players.find(x => x.id === p.partnerId) && (
+                                    <span style={{fontSize:9,color:'#ce93d8'}}>🔗</span>
+                                  )}
+                                  {isRearranging && <span style={{marginLeft:'auto',fontSize:12,color:'var(--teal)',opacity:0.7}}>⠿</span>}
+                                  {/* Sub-out buttons: ⚡ auto-fill  |  ✕ manual picker */}
+                                  {!isRearranging && (
+                                    <div style={{display:'flex',gap:3,marginLeft:'auto',flexShrink:0}}>
+                                      <button
+                                        title={'Auto-remove ' + p.name + ' and fill from queue (algorithm pick)'}
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setReplacingPlayer(null);
+                                          autoRemoveAndReplace(court.id, p.id);
+                                        }}
+                                        style={{
+                                          background:'var(--orange-dim)',
+                                          border:'1px solid var(--orange)55',
+                                          borderRadius:4,
+                                          color:'var(--orange)',
+                                          fontSize:10,
+                                          fontWeight:900,
+                                          cursor: queue.length === 0 ? 'not-allowed' : 'pointer',
+                                          padding:'2px 6px',
+                                          lineHeight:1.4,
+                                          flexShrink:0,
+                                          opacity: queue.length === 0 ? 0.3 : 1,
+                                          transition:'all 0.15s',
+                                        }}
+                                        disabled={queue.length === 0}
+                                      >&#9889;</button>
+                                      <button
+                                        title={'Manually choose sub for ' + p.name}
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setReplacingPlayer(
+                                            replacingPlayer?.playerId === p.id
+                                              ? null
+                                              : { courtId: court.id, playerId: p.id }
+                                          );
+                                          setRearrangeCourt(null);
+                                        }}
+                                        style={{
+                                          background: isBeingReplaced ? 'var(--red)' : 'transparent',
+                                          border: '1px solid ' + (isBeingReplaced ? 'var(--red)' : 'var(--border)'),
+                                          borderRadius:4,
+                                          color: isBeingReplaced ? '#fff' : 'var(--red)',
+                                          fontSize:11,
+                                          fontWeight:800,
+                                          cursor:'pointer',
+                                          padding:'2px 5px',
+                                          lineHeight:1.4,
+                                          flexShrink:0,
+                                          transition:'all 0.15s',
+                                        }}
+                                      >&#10005;</button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Manual sub-in picker */}
+                                {isBeingReplaced && (
+                                  <div style={{background:'var(--surface)',border:'1px solid var(--red)',borderRadius:8,padding:'10px',marginBottom:4}}>
+                                    <div style={{fontSize:11,fontWeight:700,color:'var(--red)',marginBottom:2}}>
+                                      Manually sub out <strong>{p.name}</strong>:
+                                    </div>
+                                    <div style={{fontSize:10,color:'var(--text-dim)',marginBottom:8}}>
+                                      Tip: use <span style={{color:'var(--orange)',fontWeight:900}}>&#9889;</span> for smart auto-fill from queue
+                                    </div>
+                                    {queue.length === 0
+                                      ? <div style={{fontSize:11,color:'var(--text-dim)',textAlign:'center',padding:'8px 0'}}>No players in queue</div>
+                                      : <div style={{display:'flex',flexDirection:'column',gap:4,maxHeight:160,overflowY:'auto'}}>
+                                          {queue.map(qp => (
+                                            <div
+                                              key={qp.id}
+                                              onClick={() => replaceCourtPlayer(court.id, p.id, qp)}
+                                              style={{
+                                                display:'flex',alignItems:'center',gap:6,
+                                                padding:'6px 8px',borderRadius:6,
+                                                border:'1px solid var(--border)',
+                                                background:'var(--surface2)',
+                                                cursor:'pointer',fontSize:12,
+                                                transition:'all 0.15s',
+                                              }}
+                                              onMouseOver={e => { e.currentTarget.style.borderColor='var(--green)'; e.currentTarget.style.background='var(--green-dim)'; }}
+                                              onMouseOut={e => { e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.background='var(--surface2)'; }}
+                                            >
+                                              <GenderTag gender={qp.gender} />
+                                              <LevelBadge level={qp.level} />
+                                              <span style={{fontWeight:600,flex:1}}>{qp.name}</span>
+                                              <span style={{fontSize:10,color:'var(--text-muted)'}}>🎮 {playerStats[qp.id]?.games || 0}g</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                    }
+                                    <button
+                                      onClick={() => setReplacingPlayer(null)}
+                                      style={{marginTop:8,width:'100%',background:'transparent',border:'1px solid var(--border)',borderRadius:6,color:'var(--text-muted)',fontSize:11,fontWeight:600,padding:'5px',cursor:'pointer'}}
+                                    >Cancel</button>
+                                  </div>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </React.Fragment>
                   ))}
-                  <div className="team-divider">— VS —</div>
-                  {court.players.teamB.map(p => (
-                    <div key={p.id} className="player-slot">
-                      <LevelBadge level={p.level} />
-                      <span className="player-name">{p.name}</span>
-                      {p.partnerId && court.players.teamB.find(x => x.id === p.partnerId) && (
-                        <span style={{fontSize:9,color:'#ce93d8'}}>🔗</span>
-                      )}
-                    </div>
-                  ))}
+
+                  <div style={{fontSize:9,color:'var(--text-dim)',marginBottom:4,textAlign:'right',lineHeight:1.6}}>
+                    <span style={{color:'var(--orange)',fontWeight:900}}>&#9889;</span>{' '}auto-fill &nbsp;&middot;&nbsp; <span style={{color:'var(--red)',fontWeight:700}}>&#10005;</span>{' '}manual sub
+                  </div>
                   <div className="court-action-row">
-                    <button className="btn btn-red btn-sm" style={{flex:1}} onClick={() => endGame(court.id)}>End & Score</button>
+                    {rearrangeCourt !== court.id && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setRearrangeCourt(court.id); setDragPlayerId(null); setReplacingPlayer(null); }} title="Rearrange players by dragging">&#8645; Rearrange</button>
+                    )}
+                    <button className="btn btn-red btn-sm" style={{flex:1}} onClick={() => { setRearrangeCourt(null); endGame(court.id); }}>End &amp; Score</button>
                   </div>
                 </>
               ) : (
@@ -701,18 +2508,38 @@ function App() {
                         <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:6}}>
                           Pick 4 players ({manualSelected.length}/4) — first 2 = Team A, last 2 = Team B
                         </div>
+                        {/* Search box */}
+                        <div style={{position:'relative',marginBottom:8}}>
+                          <span style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',fontSize:12,color:'var(--text-dim)',pointerEvents:'none'}}>🔍</span>
+                          <input
+                            type="text"
+                            placeholder="Search player…"
+                            value={manualSearch}
+                            onChange={e => setManualSearch(e.target.value)}
+                            style={{paddingLeft:28,fontSize:12,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,color:'#e8f0fe',width:'100%'}}
+                          />
+                          {manualSearch && (
+                            <button onClick={() => setManualSearch('')} style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:13,lineHeight:1,padding:0}}>✕</button>
+                          )}
+                        </div>
                         <div className="player-select-grid">
-                          {queue.map(p => (
-                            <div key={p.id}
-                              className={`player-select-item ${manualSelected.find(x=>x.id===p.id)?'selected':''}`}
-                              onClick={() => toggleManualPlayer(p)}>
-                              <LevelBadge level={p.level} /> {p.name}
-                            </div>
-                          ))}
+                          {queue
+                            .filter(p => !manualSearch.trim() || p.name.toLowerCase().includes(manualSearch.trim().toLowerCase()))
+                            .map(p => (
+                              <div key={p.id}
+                                className={`player-select-item ${manualSelected.find(x=>x.id===p.id)?'selected':''}`}
+                                onClick={() => toggleManualPlayer(p)}>
+                                <GenderTag gender={p.gender} /><LevelBadge level={p.level} /> {p.name}
+                              </div>
+                            ))
+                          }
+                          {queue.filter(p => !manualSearch.trim() || p.name.toLowerCase().includes(manualSearch.trim().toLowerCase())).length === 0 && (
+                            <div style={{gridColumn:'1/-1',fontSize:11,color:'var(--text-dim)',textAlign:'center',padding:8}}>No players match "{manualSearch}"</div>
+                          )}
                         </div>
                         <div style={{display:'flex',gap:6}}>
                           <button className="btn btn-green btn-sm" style={{flex:1}} onClick={confirmManual}>Start Game</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => setManualCourt(null)}>Cancel</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => { setManualCourt(null); setManualSearch(''); }}>Cancel</button>
                         </div>
                       </div>
                     ) : (
@@ -722,8 +2549,8 @@ function App() {
                     )
                   )}
                   {matchMode !== 'Manual' && queue.length >= 4 && (
-                    <button className="btn btn-ghost btn-sm" style={{width:'100%',marginTop:8}} onClick={autoAssign}>
-                      Auto-fill This Court
+                    <button className="btn btn-ghost btn-sm" style={{width:'100%',marginTop:8}} onClick={() => autoAssign(court.id)}>
+                      ▶ Start Game
                     </button>
                   )}
                   {queue.length < 4 && (
@@ -736,39 +2563,261 @@ function App() {
         </div>
       )}
 
+      {/* UP NEXT — preview of next 2 matches from queue */}
+      {showUpNext && activeTab === 'courts' && queue.length >= 4 && matchMode !== 'Manual' && (() => {
+        // Simulate the next 2 auto-assign picks without touching real state.
+        // Must mirror autoAssign exactly: same forceMixed counter logic and
+        // same priorityIds (readyToFire requested game) check.
+        const previewMatches = [];
+        // Cap preview queue to first 20 players — avoids O(n⁴) hang with large rosters.
+        // The actual autoAssign uses the full queue, so this only affects the preview display.
+        let simQueue = queue.slice(0, 20);
+        let simAssignCount = assignCount.current;
+        let simSbMixedCount = sbMixedCount.current;
+        for (let n = 0; n < 2; n++) {
+          if (simQueue.length < 4) break;
+          simAssignCount += 1;
+          let forceMixed = false;
+          if (matchMode === 'Skill Based' || matchMode === 'Same Level') {
+            forceMixed = simAssignCount % 3 === 0;
+          }
+          if (matchMode === 'Skill Based') {
+            simSbMixedCount += 1;
+            forceMixed = simSbMixedCount % 3 === 0;
+          }
+          // Check for a readyToFire requested game at the front of the simulated queue
+          let simPriorityIds = null;
+          for (const req of requestedGames) {
+            if (!req.readyToFire) continue;
+            const positions = req.playerIds.map(id => simQueue.findIndex(p => p.id === id));
+            if (positions.some(pos => pos === -1)) continue;
+            const maxPos = Math.max(...positions);
+            const othersAhead = simQueue.slice(0, maxPos).filter(p => !req.playerIds.includes(p.id)).length;
+            if (othersAhead === 0) { simPriorityIds = req.playerIds; break; }
+          }
+          const m = findMatch(simQueue, matchMode, forceMixed, simPriorityIds);
+          if (!m) break;
+          previewMatches.push(m);
+          simQueue = simQueue.filter(p => !m.ids.includes(p.id));
+        }
+        if (!previewMatches.length) return null;
+        return (
+          <div style={{marginTop:12}}>
+            <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,color:'var(--text-dim)',marginBottom:8,display:'flex',alignItems:'center',gap:6}}>
+              <span style={{width:6,height:6,borderRadius:'50%',background:'var(--text-dim)',display:'inline-block'}}></span>
+              Up Next — Queue Preview
+            </div>
+            <div className="courts-grid">
+              {previewMatches.map((m, idx) => {
+                const fCount = [...m.teamA, ...m.teamB].filter(p => p.gender === 'F').length;
+                const matchLabel = matchMode === 'Open Level'
+                  ? '⚡ Open Levels'
+                  : fCount === 2 ? '♀♂ Mixed Doubles'
+                  : fCount === 4 ? "♀ Women's Doubles"
+                  : "♂ Men's Doubles";
+                return (
+                  <div key={idx} className="court-card" style={{
+                    borderColor:'var(--text-dim)',
+                    borderStyle:'dashed',
+                    opacity:0.75,
+                    position:'relative',
+                    overflow:'hidden',
+                  }}>
+                    <div style={{position:'absolute',top:0,right:0,background:'var(--surface3)',borderBottomLeftRadius:6,padding:'2px 7px',fontSize:9,fontWeight:800,color:'var(--text-dim)',letterSpacing:1,textTransform:'uppercase'}}>
+                      Up Next {idx + 1}
+                    </div>
+                    <div className="court-header">
+                      <span className="court-name" style={{color:'var(--text-muted)'}}>
+                        <span className="court-status-dot dot-gray"></span>
+                        Next Game {idx + 1}
+                      </span>
+                      <span style={{fontSize:9,fontWeight:800,color:'var(--text-dim)',letterSpacing:.5,textTransform:'uppercase'}}>{matchLabel}</span>
+                    </div>
+                    {[
+                      { label: '— TEAM A —', players: m.teamA },
+                      null,
+                      { label: '— TEAM B —', players: m.teamB },
+                    ].map((section, si) =>
+                      section === null
+                        ? <div key="vs" className="team-divider" style={{color:'var(--text-dim)'}}>— VS —</div>
+                        : <React.Fragment key={section.label}>
+                            <div className="team-divider" style={{color:'var(--text-dim)'}}>{section.label}</div>
+                            {section.players.map(p => {
+                              const partner = section.players.find(x => x.id !== p.id);
+                              const partnerRep = partner ? phGet(p.id, partner.id) : 0;
+                              return (
+                                <div key={p.id} className="player-slot" style={{opacity:0.85,background:'var(--surface2)'}}>
+                                  <GenderTag gender={p.gender} />
+                                  <LevelBadge level={p.level} />
+                                  <span className="player-name" style={{color:'var(--text-muted)'}}>{p.name}</span>
+                                  {partnerRep > 0
+                                    ? <span title={`Played together ${partnerRep}× before`} style={{fontSize:9,color:'var(--orange)',fontWeight:800,marginLeft:'auto'}}>🔁×{partnerRep}</span>
+                                    : <span style={{fontSize:9,color:'var(--green)',fontWeight:800,marginLeft:'auto'}}>✦ new</span>
+                                  }
+                                </div>
+                              );
+                            })}
+                          </React.Fragment>
+                    )}
+                    <div style={{fontSize:10,color:'var(--text-dim)',textAlign:'center',marginTop:8,fontStyle:'italic'}}>
+                      preview · subject to change
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* QUEUE TAB */}
       {activeTab === 'queue' && (
         <div className="two-col">
           <div className="card">
-            <div className="section-title">Waitlist — {queue.length} players</div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,gap:6,flexWrap:'wrap'}}>
+              <div className="section-title" style={{marginBottom:0}}>Waitlist — {queue.length} players</div>
+              <div style={{display:'flex',gap:6}}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={exportWaitlistXLSX}
+                  disabled={queue.length === 0}
+                  title="Export waitlist to Excel"
+                  style={{display:'flex',alignItems:'center',gap:4,border:'1px solid var(--green)',color:'var(--green)',opacity:queue.length===0?0.4:1}}>
+                  ⬇ Excel
+                </button>
+                <label
+                  title="Load players from Excel (.xlsx)"
+                  style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:'var(--r)',fontSize:11,fontWeight:600,cursor:'pointer',background:'var(--surface3)',border:'1px solid var(--teal)',color:'var(--teal)'}}>
+                  ⬆ Load
+                  <input type="file" accept=".xlsx,.xls" onChange={importWaitlistXLSX} style={{display:'none'}} />
+                </label>
+              </div>
+            </div>
+            {/* Search bar */}
+            <div style={{position:'relative',marginBottom:10}}>
+              <span style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--text-dim)',pointerEvents:'none'}}>🔍</span>
+              <input
+                type="text"
+                placeholder="Search player…"
+                value={waitlistSearch}
+                onChange={e => setWaitlistSearch(e.target.value)}
+                style={{paddingLeft:30,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,fontSize:12,color:'#e8f0fe',width:'100%'}}
+              />
+              {waitlistSearch && (
+                <button
+                  onClick={() => setWaitlistSearch('')}
+                  style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:14,lineHeight:1,padding:0}}
+                >✕</button>
+              )}
+            </div>
             {queue.length === 0
               ? <div className="empty-state">No players in queue. Add some below!</div>
               : (
                 <>
                   <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:8,lineHeight:1.5}}>
-                    Sorted by games played · Auto-assign always picks players with fewest games first.
+                    Listed in registration order — earliest arrivals get priority.
+                    {matchMode === 'Skill Based' && ' Skill Based: adjacent levels, mixed gender every 3rd game.'}
+                    {matchMode === 'Open Level' && ' Open Level: all skill levels, balanced teams.'}
+                  </div>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:8,alignItems:'center'}}>
+                    <span style={{fontSize:10,color:'var(--text-dim)',fontWeight:700,textTransform:'uppercase',letterSpacing:.5,marginRight:2}}>Sort:</span>
+                    {[
+                      { col: null, label: 'Queue Order' },
+                      { col: 'name', label: 'Name' },
+                      { col: 'level', label: 'Level' },
+                      { col: 'games', label: 'Games' },
+                    ].map(({col, label}) => (
+                      <button key={label}
+                        onClick={() => col ? toggleSort(queueSort, setQueueSort, col) : setQueueSort({ col: null, dir: 'asc' })}
+                        style={{
+                          padding:'3px 10px', borderRadius:20, border:`1px solid ${(!col && !queueSort.col) || queueSort.col===col ? 'var(--blue)' : 'var(--border)'}`,
+                          background: (!col && !queueSort.col) || queueSort.col===col ? 'var(--blue-dim)' : 'transparent',
+                          color: (!col && !queueSort.col) || queueSort.col===col ? 'var(--blue)' : 'var(--text-muted)',
+                          fontSize:11, fontWeight:600, cursor:'pointer',
+                        }}>
+                        {label}{col && queueSort.col===col && <span style={{marginLeft:3,fontSize:9}}>{queueSort.dir==='asc'?'▲':'▼'}</span>}
+                      </button>
+                    ))}
                   </div>
                   <div className="queue-list">
-                    {[...queue]
-                      .sort((a, b) => (playerStats[a.id]?.games || 0) - (playerStats[b.id]?.games || 0))
-                      .map((p, i) => {
+                    {(() => {
+                      let filtered = queue
+                        .filter(p => !waitlistSearch.trim() || p.name.toLowerCase().includes(waitlistSearch.trim().toLowerCase()));
+                      if (queueSort.col) {
+                        const dir = queueSort.dir === 'asc' ? 1 : -1;
+                        filtered = [...filtered].sort((a, b) => {
+                          if (queueSort.col === 'name') return dir * a.name.localeCompare(b.name);
+                          if (queueSort.col === 'level') return dir * (LEVEL_IDX[a.level] - LEVEL_IDX[b.level]);
+                          if (queueSort.col === 'games') return dir * ((playerStats[a.id]?.games||0) - (playerStats[b.id]?.games||0));
+                          return 0;
+                        });
+                      }
+                      if (filtered.length === 0) return (
+                        <div className="empty-state" style={{padding:'16px',fontSize:12}}>No players match "{waitlistSearch}"</div>
+                      );
+                      return filtered.map((p, i) => {
                         const partner = p.partnerId ? queue.find(x => x.id === p.partnerId) : null;
                         const gamesPlayed = playerStats[p.id]?.games || 0;
+                        const queuePos = queue.findIndex(x => x.id === p.id) + 1;
                         return (
-                          <div key={p.id} className="queue-item">
-                            <span className="queue-num">#{i+1}</span>
-                            <LevelBadge level={p.level} />
-                            <span className="queue-name">{p.name}</span>
+                          <div key={p.id} className="queue-item" style={{flexWrap: editingPlayerId === p.id ? 'wrap' : 'nowrap'}}>
+                            <span className="queue-num">#{queuePos}</span>
+                            <GenderTag gender={p.gender} />
+                            {editingPlayerId === p.id ? (
+                              <>
+                                <input
+                                  autoFocus
+                                  value={editingPlayerName}
+                                  onChange={e => setEditingPlayerName(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') renamePlayer(p.id, editingPlayerName);
+                                    if (e.key === 'Escape') { setEditingPlayerId(null); setEditingPlayerName(''); setEditingPlayerLevel('Beginner'); }
+                                  }}
+                                  style={{flex:1,padding:'3px 7px',fontSize:12,borderRadius:5,border:'1px solid var(--blue)',background:'var(--surface)',color:'#e8f0fe',outline:'none',minWidth:0}}
+                                />
+                                <select
+                                  value={editingPlayerLevel}
+                                  onChange={e => setEditingPlayerLevel(e.target.value)}
+                                  style={{padding:'3px 6px',fontSize:11,borderRadius:5,border:'1px solid var(--blue)',background:'var(--surface)',color:'#e8f0fe',outline:'none',width:'auto'}}
+                                >
+                                  {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                              </>
+                            ) : (
+                              <>
+                                <LevelBadge level={p.level} />
+                                <span className="queue-name">{p.name}</span>
+                              </>
+                            )}
                             {partner && (
-                              <span className="partner-tag">🔗 {partner.name}</span>
+                              <span className="partner-tag" title="Fixed pair" style={{cursor:'pointer'}} onClick={() => unlinkPartner(p.id)}>🔗 {partner.name} ✕</span>
                             )}
                             <span style={{fontSize:10,color:'var(--text-muted)',marginLeft:'auto',marginRight:4,whiteSpace:'nowrap'}}>
                               🎮 {gamesPlayed}g
                             </span>
-                            <button className="btn btn-ghost btn-sm" onClick={() => removeFromQueue(p.id)}>✕</button>
+                            {editingPlayerId === p.id ? (
+                              <>
+                                <button className="btn btn-green btn-sm" onClick={() => renamePlayer(p.id, editingPlayerName)}>✓</button>
+                                <button className="btn btn-ghost btn-sm" onClick={() => { setEditingPlayerId(null); setEditingPlayerName(''); setEditingPlayerLevel('Beginner'); }}>✕</button>
+                              </>
+                            ) : (
+                              <>
+                                {!partner && (
+                                  <button
+                                    className="btn btn-ghost btn-sm"
+                                    title="Link fixed partner"
+                                    style={{color:'#ce93d8',borderColor:'#9c27b055'}}
+                                    onClick={() => { setPairModal({ playerId: p.id }); setPairTarget(null); }}
+                                  >🔗</button>
+                                )}
+                                <button className="btn btn-ghost btn-sm" title="Edit player" onClick={() => { setEditingPlayerId(p.id); setEditingPlayerName(p.name); setEditingPlayerLevel(p.level); }}>✏️</button>
+                                <button className="btn btn-ghost btn-sm" onClick={() => removeFromQueue(p.id)}>✕</button>
+                              </>
+                            )}
                           </div>
                         );
-                      })}
+                      });
+                    })()}
                   </div>
                 </>
               )
@@ -799,9 +2848,21 @@ function App() {
                   <div style={{fontSize:10,color:'var(--text-muted)',fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>{addingPair ? 'Player 1' : 'Player'}</div>
                   <input placeholder="Name" value={newName} onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addPlayer()} style={{marginBottom:6}} />
-                  <select value={newLevel} onChange={e => setNewLevel(e.target.value)}>
+                  <select value={newLevel} onChange={e => setNewLevel(e.target.value)} style={{marginBottom:6}}>
                     {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
+                  <div style={{display:'flex',gap:6}}>
+                    <button type="button"
+                      onClick={() => setNewGender('M')}
+                      style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newGender==='M'?'var(--blue)':'var(--border)'}`,background:newGender==='M'?'var(--blue-dim)':'transparent',color:newGender==='M'?'var(--blue)':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                      ♂ Male
+                    </button>
+                    <button type="button"
+                      onClick={() => setNewGender('F')}
+                      style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newGender==='F'?'#e91e63':'var(--border)'}`,background:newGender==='F'?'#2a0818':'transparent',color:newGender==='F'?'#f06292':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                      ♀ Female
+                    </button>
+                  </div>
                 </div>
 
                 {/* Player 2 (only when adding pair) */}
@@ -810,10 +2871,22 @@ function App() {
                     <div style={{fontSize:10,color:'#ce93d8',fontWeight:700,marginBottom:5,textTransform:'uppercase',letterSpacing:.5}}>🔗 Partner (Player 2)</div>
                     <input placeholder="Partner name" value={newPartnerName} onChange={e => setNewPartnerName(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && addPlayer()} style={{marginBottom:6,borderColor:'#9c27b055'}} />
-                    <select value={newPartnerLevel} onChange={e => setNewPartnerLevel(e.target.value)} style={{borderColor:'#9c27b055'}}>
+                    <select value={newPartnerLevel} onChange={e => setNewPartnerLevel(e.target.value)} style={{borderColor:'#9c27b055',marginBottom:6}}>
                       {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
-                    <div style={{fontSize:10,color:'#ce93d8',marginTop:6,lineHeight:1.5}}>
+                    <div style={{display:'flex',gap:6,marginBottom:6}}>
+                      <button type="button"
+                        onClick={() => setNewPartnerGender('M')}
+                        style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newPartnerGender==='M'?'var(--blue)':'#9c27b044'}`,background:newPartnerGender==='M'?'var(--blue-dim)':'transparent',color:newPartnerGender==='M'?'var(--blue)':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                        ♂ Male
+                      </button>
+                      <button type="button"
+                        onClick={() => setNewPartnerGender('F')}
+                        style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${newPartnerGender==='F'?'#e91e63':'#9c27b044'}`,background:newPartnerGender==='F'?'#2a0818':'transparent',color:newPartnerGender==='F'?'#f06292':'var(--text-muted)',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                        ♀ Female
+                      </button>
+                    </div>
+                    <div style={{fontSize:10,color:'#ce93d8',lineHeight:1.5}}>
                       Fixed partners will always be placed on the same team.
                     </div>
                   </div>
@@ -830,11 +2903,319 @@ function App() {
                 {LEVELS.map(l => <span key={l}><LevelBadge level={l} /></span>)}
               </div>
               <div style={{marginTop:10,fontSize:12,color:'var(--text-muted)',lineHeight:1.8}}>
+                <div><strong style={{color:'#aaffaa'}}>Open</strong> — All welcome, used in Open Level mode</div>
                 <div><strong style={{color:'var(--green)'}}>Beginner</strong> — Just learning</div>
                 <div><strong style={{color:'var(--blue)'}}>Low-Int</strong> — Know basics, working on consistency</div>
+                <div><strong style={{color:'var(--teal)'}}>Intermediate</strong> — Consistent rallies, developing strategy</div>
                 <div><strong style={{color:'var(--orange)'}}>High-Int</strong> — Solid fundamentals, strategic play</div>
                 <div><strong style={{color:'#ce93d8'}}>Advanced</strong> — Competitive, tournament-ready</div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PLAYER LIST TAB — master roster */}
+      {activeTab === 'playerlist' && (
+        <PlayerListTab
+          playerList={playerList}
+          setPlayerList={setPlayerList}
+          playerListSearch={playerListSearch}
+          setPlayerListSearch={setPlayerListSearch}
+          queue={queue}
+          setQueue={setQueue}
+          courts={courts}
+          showNotif={showNotif}
+          addingPair={addingPair}
+          setAddingPair={setAddingPair}
+          newName={newName} setNewName={setNewName}
+          newLevel={newLevel} setNewLevel={setNewLevel}
+          newGender={newGender} setNewGender={setNewGender}
+          newPartnerName={newPartnerName} setNewPartnerName={setNewPartnerName}
+          newPartnerLevel={newPartnerLevel} setNewPartnerLevel={setNewPartnerLevel}
+          newPartnerGender={newPartnerGender} setNewPartnerGender={setNewPartnerGender}
+          addPlayer={addPlayer}
+          onJoin={(id) => { if (joinRoundRef.current[id] === undefined) joinRoundRef.current[id] = roundsFiredRef.current; }}
+        />
+      )}
+      {/* REQUESTED GAMES TAB */}
+      {activeTab === 'requests' && (
+        <div className="two-col">
+          <div className="card">
+            <div className="section-title">Requested Games Queue</div>
+            <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:10,lineHeight:1.5}}>
+              Once all other players have had their turn, the 4 players stay in queue at their natural position. Auto Assign will group them together when they reach the front — no one gets skipped. Use <strong style={{color:'var(--orange)'}}>🎯 Start This Game</strong> to fire it manually anytime all 4 are free.
+            </div>
+            {requestedGames.length === 0
+              ? <div className="empty-state">No requested games. Add one using the panel →</div>
+              : (
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {requestedGames.map((req, idx) => {
+                    const allSessionPlayers = [
+                      ...queue,
+                      ...courts.flatMap(c => c.players ? [...c.players.teamA, ...c.players.teamB] : [])
+                    ];
+                    const players = req.playerIds.map(id => {
+                      const p = allSessionPlayers.find(x => x.id === id);
+                      const onCourt = p && courts.some(c => c.players && [...c.players.teamA,...c.players.teamB].find(x=>x.id===id));
+                      const baseline = req.baselineCounts?.[id] ?? 0;
+                      const currentGames = playerStats[id]?.games || 0;
+                      const roundedUp = currentGames > baseline;
+                      return p ? { ...p, onCourt, roundedUp } : null;
+                    });
+                    const allFound = players.every(Boolean);
+                    const allFree = allFound && players.every(p => !p.onCourt);
+                    const allRoundedUp = allFound && players.every(p => p.roundedUp);
+                    const someOnCourt = players.some(p => p && p.onCourt);
+                    const hasOpenCourt = courts.some(c => !c.players);
+                    const canStart = allFree && hasOpenCourt;
+                    const isReadyToFire = !!req.readyToFire;
+                    // Count others in queue ahead of these 4
+                    const positions = req.playerIds.map(id => queue.findIndex(p => p.id === id));
+                    const allInQueue = positions.every(pos => pos !== -1);
+                    const maxPos = allInQueue ? Math.max(...positions) : -1;
+                    const othersAhead = allInQueue ? queue.slice(0, maxPos).filter(p => !req.playerIds.includes(p.id)).length : null;
+                    const atFront = allInQueue && othersAhead === 0;
+                    return (
+                      <div key={req.id} className="req-item" style={{flexWrap:'wrap',gap:8,
+                        borderColor: isReadyToFire && atFront ? 'var(--green)' : isReadyToFire ? 'var(--orange)' : someOnCourt ? 'var(--blue)' : 'var(--border)',
+                        opacity: allFound ? 1 : 0.55}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8,width:'100%'}}>
+                          <span className="req-badge">#{idx+1}</span>
+                          {!allFound && <span style={{fontSize:10,color:'var(--red)',fontWeight:700}}>⚠ Player left session</span>}
+                          {allFound && isReadyToFire && atFront && <span style={{fontSize:10,color:'var(--green)',fontWeight:700}}>⚡ At front of queue — fires on next Auto Assign!</span>}
+                          {allFound && isReadyToFire && !atFront && allFree && othersAhead !== null && <span style={{fontSize:10,color:'var(--orange)',fontWeight:700}}>✓ Round done — {othersAhead} player{othersAhead!==1?'s':''} ahead in queue</span>}
+                          {allFound && isReadyToFire && !allFree && <span style={{fontSize:10,color:'var(--blue)',fontWeight:700}}>✓ Round done — some still on court</span>}
+                          {allFound && !isReadyToFire && someOnCourt && <span style={{fontSize:10,color:'var(--blue)',fontWeight:700}}>🏓 Waiting for round to finish</span>}
+                          {allFound && !isReadyToFire && !someOnCourt && <span style={{fontSize:10,color:'var(--text-muted)',fontWeight:700}}>⏳ Waiting for all other players to play a round</span>}
+                          <button className="btn btn-ghost btn-sm" style={{color:'var(--red)',borderColor:'var(--red-dim)',marginLeft:'auto'}} onClick={() => removeRequestedGame(req.id)}>✕</button>
+                        </div>
+                        {/* Per-player round status */}
+                        <div style={{display:'flex',flexWrap:'wrap',gap:5,width:'100%'}}>
+                          {players.map((p, i) => p
+                            ? <span key={req.playerIds[i]} style={{display:'inline-flex',alignItems:'center',gap:4,
+                                background: p.roundedUp ? 'var(--green-dim)' : p.onCourt ? 'var(--blue-dim)' : 'var(--surface3)',
+                                border: `1px solid ${p.roundedUp ? 'var(--green)44' : p.onCourt ? 'var(--blue)44' : 'transparent'}`,
+                                borderRadius:6,padding:'3px 8px',fontSize:12,fontWeight:600}}>
+                                <GenderTag gender={p.gender} /><LevelBadge level={p.level} />{p.name}
+                                {p.onCourt && <span style={{fontSize:9,color:'var(--blue)',fontWeight:800,marginLeft:2}}>🏓</span>}
+                                {p.roundedUp && !p.onCourt && <span style={{fontSize:9,color:'var(--green)',fontWeight:800,marginLeft:2}}>✓</span>}
+                              </span>
+                            : <span key={req.playerIds[i]} style={{fontSize:11,color:'var(--red)',background:'var(--red-dim)',borderRadius:6,padding:'3px 8px'}}>Left session</span>
+                          )}
+                        </div>
+                        <button
+                          className="btn btn-sm"
+                          style={{width:'100%',background:canStart?'var(--orange)':'var(--surface3)',color:canStart?'#000':'var(--text-dim)',border:`1px solid ${canStart?'var(--orange)':'var(--border)'}`,opacity:canStart?1:0.5,cursor:canStart?'pointer':'not-allowed'}}
+                          disabled={!canStart}
+                          onClick={() => startRequestedGame(req)}
+                        >🎯 Start This Game</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            }
+          </div>
+          <div className="card">
+            <div className="section-title">Add Requested Game</div>
+            <div style={{fontSize:11,color:'var(--text-muted)',marginBottom:10,lineHeight:1.5}}>
+              Select exactly 4 players — queue or currently on court. The game fires when all 4 are free.
+            </div>
+            {(() => {
+              // All players in the session: queue + on-court
+              const allSessionPlayers = [
+                ...queue,
+                ...courts.flatMap(c => c.players ? [...c.players.teamA, ...c.players.teamB] : [])
+              ];
+              // Deduplicate by id (shouldn't duplicate but safety)
+              const seen = new Set();
+              const playerPool = allSessionPlayers.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+
+              return (
+                <>
+                  <div style={{fontSize:11,color:reqSelected.length===4?'var(--green)':'var(--text-muted)',fontWeight:700,marginBottom:6}}>
+                    {reqSelected.length}/4 players selected
+                  </div>
+                  {/* Search box */}
+                  <div style={{position:'relative',marginBottom:8}}>
+                    <span style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--text-dim)',pointerEvents:'none'}}>🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Search player…"
+                      value={reqSearch}
+                      onChange={e => setReqSearch(e.target.value)}
+                      style={{paddingLeft:30,fontSize:12,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,color:'#e8f0fe',width:'100%'}}
+                    />
+                    {reqSearch && (
+                      <button onClick={() => setReqSearch('')} style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:13,lineHeight:1,padding:0}}>✕</button>
+                    )}
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:5,maxHeight:260,overflowY:'auto',marginBottom:10}}>
+                    {playerPool.length === 0
+                      ? <div className="empty-state" style={{padding:12,fontSize:12}}>No players in session</div>
+                      : (() => {
+                          const filtered = playerPool.filter(p => !reqSearch.trim() || p.name.toLowerCase().includes(reqSearch.trim().toLowerCase()));
+                          if (filtered.length === 0) return <div style={{fontSize:11,color:'var(--text-dim)',textAlign:'center',padding:12}}>No players match "{reqSearch}"</div>;
+                          return filtered.map(p => {
+                            const sel = reqSelected.includes(p.id);
+                            const onCourt = courts.some(c => c.players && [...c.players.teamA,...c.players.teamB].find(x=>x.id===p.id));
+                            return (
+                              <div
+                                key={p.id}
+                                className={`pair-select-item ${sel ? 'selected' : ''}`}
+                                style={{
+                                  borderColor: sel ? 'var(--orange)' : onCourt ? 'var(--blue)44' : 'var(--border)',
+                                  background: sel ? 'var(--orange-dim)' : onCourt ? 'var(--blue-dim)' : 'transparent',
+                                  color: sel ? 'var(--orange)' : '#e8f0fe'
+                                }}
+                                onClick={() => {
+                                  if (sel) setReqSelected(prev => prev.filter(id => id !== p.id));
+                                  else if (reqSelected.length < 4) setReqSelected(prev => [...prev, p.id]);
+                                }}
+                              >
+                                <GenderTag gender={p.gender} />
+                                <LevelBadge level={p.level} />
+                                <span style={{fontSize:12,fontWeight:600,flex:1}}>{p.name}</span>
+                                {onCourt && <span style={{fontSize:9,color:'var(--blue)',fontWeight:800}}>🏓 on court</span>}
+                                {sel && <span style={{fontSize:11,color:'var(--orange)',fontWeight:800}}>✓</span>}
+                              </div>
+                            );
+                          });
+                        })()
+                    }
+                  </div>
+                  <div style={{display:'flex',gap:6}}>
+                    <button
+                      className="btn btn-sm"
+                      style={{flex:1,background:'var(--orange)',color:'#000',opacity:reqSelected.length===4?1:0.4}}
+                      disabled={reqSelected.length !== 4}
+                      onClick={() => { addRequestedGame(reqSelected); setReqSelected([]); setReqSearch(''); }}
+                    >🎯 Add Request</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setReqSelected([])}>Clear</button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* SIMULATION PROGRESS OVERLAY */}
+      {simRunning && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:400}}>
+          <div style={{background:'var(--surface)',border:'1px solid #7c3aed',borderRadius:14,padding:32,width:340,textAlign:'center'}}>
+            <div style={{fontSize:28,marginBottom:8}}>🧪</div>
+            <div style={{fontSize:17,fontWeight:800,color:'#c4b5fd',marginBottom:4}}>Simulation Running…</div>
+            <div style={{fontSize:13,color:'var(--text-muted)',marginBottom:20}}>Auto-filling & ending games</div>
+            <div style={{background:'var(--surface3)',borderRadius:8,height:16,overflow:'hidden',marginBottom:10,border:'1px solid var(--border)'}}>
+              <div style={{height:'100%',background:'linear-gradient(90deg,#7c3aed,#a855f7)',borderRadius:8,width:`${simTarget>0?Math.min(100,Math.round(simProgress/simTarget*100)):0}%`,transition:'width 0.2s'}} />
+            </div>
+            <div style={{fontSize:22,fontWeight:800,color:'#c4b5fd',fontVariantNumeric:'tabular-nums'}}>
+              {simProgress} <span style={{fontSize:14,color:'var(--text-muted)',fontWeight:600}}>/ {simTarget} games</span>
+            </div>
+            <div style={{fontSize:12,color:'var(--text-dim)',marginTop:6}}>{simTarget>0?Math.min(100,Math.round(simProgress/simTarget*100)):0}% complete</div>
+          </div>
+        </div>
+      )}
+
+      {/* SIMULATION MODAL */}
+      {simModal && (
+        <div className="session-modal-overlay" onClick={() => setSimModal(false)}>
+          <div className="session-modal" onClick={e => e.stopPropagation()}>
+            <div style={{fontSize:24,marginBottom:6,textAlign:'center'}}>🧪</div>
+            <h2 style={{textAlign:'center',color:'#c4b5fd'}}>Test Simulation</h2>
+            <p style={{textAlign:'center'}}>
+              Automatically runs Auto Assign + End Game in a loop, using random scores, until the target number of games is reached. Players cycle back to the queue after each game.
+            </p>
+            {matchMode === 'Manual' && (
+              <div style={{background:'var(--red-dim)',border:'1px solid var(--red)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'#f88',marginBottom:14,textAlign:'center'}}>
+                ⚠ Match mode is set to <strong>Manual</strong> — switch to an Auto mode first.
+              </div>
+            )}
+            {queue.length < 4 && (
+              <div style={{background:'var(--orange-dim)',border:'1px solid var(--orange)',borderRadius:8,padding:'10px 14px',fontSize:12,color:'var(--orange)',marginBottom:14,textAlign:'center'}}>
+                ⚠ Need at least 4 players in the waitlist to simulate.
+              </div>
+            )}
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontSize:11,fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Number of games to simulate</label>
+              <input
+                type="number"
+                min="1"
+                max="500"
+                value={simGames}
+                onChange={e => setSimGames(e.target.value)}
+                style={{fontSize:28,fontWeight:800,textAlign:'center',color:'#c4b5fd',background:'var(--surface2)',border:'2px solid #7c3aed',borderRadius:8,padding:'10px'}}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter' && !matchMode==='Manual' && queue.length >= 4) runSimulation(Math.max(1,Math.min(500,parseInt(simGames)||1))); }}
+              />
+              <div style={{fontSize:11,color:'var(--text-dim)',marginTop:5,textAlign:'center'}}>max 500 per run</div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button
+                className="btn btn-sm"
+                style={{flex:1,background:'#7c3aed',color:'#fff',fontSize:14,padding:'10px',opacity:(matchMode==='Manual'||queue.length<4)?0.4:1}}
+                disabled={matchMode==='Manual' || queue.length < 4}
+                onClick={() => runSimulation(Math.max(1, Math.min(500, parseInt(simGames) || 1)))}
+              >▶ Run Simulation</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSimModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAIR LINK MODAL */}
+      {pairModal && (
+        <div className="pair-modal-overlay" onClick={() => { setPairModal(null); setPairSearch(''); }}>
+          <div className="pair-modal" onClick={e => e.stopPropagation()}>
+            <h2>🔗 Link Fixed Partner</h2>
+            <p>
+              Select a partner for <strong style={{color:'#ce93d8'}}>{queue.find(p=>p.id===pairModal.playerId)?.name}</strong>.
+              They will always be placed on the same team.
+            </p>
+            {/* Search box */}
+            <div style={{position:'relative',marginBottom:10}}>
+              <span style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'var(--text-dim)',pointerEvents:'none'}}>🔍</span>
+              <input
+                type="text"
+                placeholder="Search player…"
+                value={pairSearch}
+                onChange={e => setPairSearch(e.target.value)}
+                style={{paddingLeft:30,fontSize:12,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:6,color:'#e8f0fe',width:'100%'}}
+              />
+              {pairSearch && (
+                <button onClick={() => setPairSearch('')} style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'var(--text-dim)',cursor:'pointer',fontSize:13,lineHeight:1,padding:0}}>✕</button>
+              )}
+            </div>
+            <div className="pair-select-list">
+              {(() => {
+                const candidates = queue.filter(p => p.id !== pairModal.playerId && !p.partnerId);
+                const filtered = candidates.filter(p => !pairSearch.trim() || p.name.toLowerCase().includes(pairSearch.trim().toLowerCase()));
+                if (candidates.length === 0) return <div style={{fontSize:12,color:'var(--text-dim)',textAlign:'center',padding:12}}>No available players to link</div>;
+                if (filtered.length === 0) return <div style={{fontSize:12,color:'var(--text-dim)',textAlign:'center',padding:12}}>No players match "{pairSearch}"</div>;
+                return filtered.map(p => (
+                  <div
+                    key={p.id}
+                    className={`pair-select-item ${pairTarget===p.id?'selected':''}`}
+                    onClick={() => setPairTarget(pairTarget === p.id ? null : p.id)}
+                  >
+                    <GenderTag gender={p.gender} />
+                    <LevelBadge level={p.level} />
+                    <span style={{flex:1,fontWeight:600}}>{p.name}</span>
+                    {pairTarget === p.id && <span style={{color:'#ce93d8',fontWeight:800}}>✓</span>}
+                  </div>
+                ));
+              })()}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button
+                className="btn btn-sm"
+                style={{flex:1,background:'var(--purple)',color:'#fff',opacity:pairTarget?1:0.4}}
+                disabled={!pairTarget}
+                onClick={() => { linkPartners(pairModal.playerId, pairTarget); setPairModal(null); setPairTarget(null); setPairSearch(''); }}
+              >Link as Fixed Pair</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setPairModal(null); setPairTarget(null); setPairSearch(''); }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -859,18 +3240,41 @@ function App() {
                 <table className="history-table">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Time</th>
-                      <th>Court</th>
-                      <th>Team A</th>
-                      <th>Score</th>
-                      <th>Team B</th>
-                      <th>Winner</th>
-                      <th>Duration</th>
+                      {[
+                        { col: 'id', label: '#' },
+                        { col: 'time', label: 'Time' },
+                        { col: 'courtId', label: 'Court' },
+                        { col: null, label: 'Team A' },
+                        { col: 'scoreA', label: 'Score' },
+                        { col: null, label: 'Team B' },
+                        { col: 'winner', label: 'Winner' },
+                        { col: 'duration', label: 'Duration' },
+                      ].map(({col, label}) => (
+                        <th key={label} onClick={col ? () => toggleSort(historySort, setHistorySort, col) : undefined}
+                          style={{cursor: col ? 'pointer' : 'default', userSelect:'none', whiteSpace:'nowrap'}}>
+                          {label}{col && <SortIcon sort={historySort} col={col} />}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {[...history].reverse().map((g, i) => (
+                    {(() => {
+                      let sorted = [...history];
+                      if (historySort.col) {
+                        sorted.sort((a, b) => {
+                          let av = a[historySort.col], bv = b[historySort.col];
+                          if (historySort.col === 'duration') { av = Number(av); bv = Number(bv); }
+                          if (historySort.col === 'scoreA') { av = Number(av); bv = Number(bv); }
+                          if (historySort.col === 'id') { av = Number(av); bv = Number(bv); }
+                          if (historySort.col === 'courtId') { av = Number(av); bv = Number(bv); }
+                          if (av < bv) return historySort.dir === 'asc' ? -1 : 1;
+                          if (av > bv) return historySort.dir === 'asc' ? 1 : -1;
+                          return 0;
+                        });
+                      } else {
+                        sorted.reverse();
+                      }
+                      return sorted.map((g, i) => (
                       <tr key={g.id}>
                         <td style={{color:'var(--text-dim)'}}>{history.length - i}</td>
                         <td style={{color:'var(--text-muted)',fontSize:11}}>{g.time}</td>
@@ -878,7 +3282,7 @@ function App() {
                         <td>
                           {g.teamA.map(p => (
                             <div key={p.id} style={{display:'flex',gap:4,alignItems:'center',marginBottom:2}}>
-                              <LevelBadge level={p.level}/><span style={{fontSize:12}}>{p.name}</span>
+                              <GenderTag gender={p.gender}/><LevelBadge level={p.level}/><span style={{fontSize:12}}>{p.name}</span>
                             </div>
                           ))}
                         </td>
@@ -890,7 +3294,7 @@ function App() {
                         <td>
                           {g.teamB.map(p => (
                             <div key={p.id} style={{display:'flex',gap:4,alignItems:'center',marginBottom:2}}>
-                              <LevelBadge level={p.level}/><span style={{fontSize:12}}>{p.name}</span>
+                              <GenderTag gender={p.gender}/><LevelBadge level={p.level}/><span style={{fontSize:12}}>{p.name}</span>
                             </div>
                           ))}
                         </td>
@@ -902,7 +3306,8 @@ function App() {
                         </td>
                         <td style={{color:'var(--text-muted)',fontSize:11}}>{g.duration}m</td>
                       </tr>
-                    ))}
+                    ));
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -941,30 +3346,56 @@ function App() {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th style={{textAlign:'center'}}>#</th>
-                      <th>Player</th>
-                      <th style={{textAlign:'center'}}>Level</th>
-                      <th style={{textAlign:'center'}}>Games</th>
-                      <th style={{textAlign:'center'}}>Wins</th>
-                      <th style={{textAlign:'center'}}>Losses</th>
-                      <th style={{textAlign:'center'}}>Win %</th>
-                      <th style={{textAlign:'center'}}>Pts For</th>
-                      <th style={{textAlign:'center'}}>Pts Ag.</th>
-                      <th style={{textAlign:'center'}}>Diff</th>
+                      {[
+                        { col: null, label: '#', align: 'center' },
+                        { col: 'name', label: 'Player', align: 'left' },
+                        { col: 'level', label: 'Level', align: 'center' },
+                        { col: 'games', label: 'Games', align: 'center' },
+                        { col: 'wins', label: 'Wins', align: 'center' },
+                        { col: 'losses', label: 'Losses', align: 'center' },
+                        { col: 'winPct', label: 'Win %', align: 'center' },
+                        { col: 'pts', label: 'Pts For', align: 'center' },
+                        { col: 'against', label: 'Pts Ag.', align: 'center' },
+                        { col: 'diff', label: 'Diff', align: 'center' },
+                      ].map(({col, label, align}) => (
+                        <th key={label} onClick={col ? () => toggleSort(statsSort, setStatsSort, col) : undefined}
+                          style={{textAlign:align, cursor: col ? 'pointer' : 'default', userSelect:'none', whiteSpace:'nowrap'}}>
+                          {label}{col && <SortIcon sort={statsSort} col={col} />}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(playerStats)
-                      .sort((a,b) => b[1].wins - a[1].wins || b[1].games - a[1].games)
-                      .map(([id, s], i) => {
+                      .map(([id, s]) => {
                         const losses = s.games - s.wins;
                         const winPct = s.games ? Math.round(s.wins / s.games * 100) : 0;
                         const diff = s.pts - s.against;
+                        return { id, s, losses, winPct, diff };
+                      })
+                      .sort((a, b) => {
+                        const col = statsSort.col || 'wins';
+                        const dir = statsSort.dir === 'asc' ? 1 : -1;
+                        if (col === 'name') return dir * a.s.name.localeCompare(b.s.name);
+                        if (col === 'level') return dir * (LEVEL_IDX[a.s.level] - LEVEL_IDX[b.s.level]);
+                        if (col === 'games') return dir * (a.s.games - b.s.games);
+                        if (col === 'wins') return dir * (a.s.wins - b.s.wins) || (b.s.games - a.s.games);
+                        if (col === 'losses') return dir * (a.losses - b.losses);
+                        if (col === 'winPct') return dir * (a.winPct - b.winPct);
+                        if (col === 'pts') return dir * (a.s.pts - b.s.pts);
+                        if (col === 'against') return dir * (a.s.against - b.s.against);
+                        if (col === 'diff') return dir * (a.diff - b.diff);
+                        return 0;
+                      })
+                      .map(({ id, s, losses, winPct, diff }, i) => {
                         return (
                           <tr key={id}>
                             <td style={{textAlign:'center',color:'var(--text-dim)',fontWeight:700}}>{i+1}</td>
                             <td>
-                              <span style={{fontWeight:700,fontSize:13}}>{s.name}</span>
+                              <div style={{display:'flex',alignItems:'center',gap:5}}>
+                                <GenderTag gender={s.gender}/>
+                                <span style={{fontWeight:700,fontSize:13}}>{s.name}</span>
+                              </div>
                             </td>
                             <td style={{textAlign:'center'}}><LevelBadge level={s.level} /></td>
                             <td style={{textAlign:'center',fontWeight:600}}>{s.games}</td>
@@ -1074,6 +3505,13 @@ function App() {
           <div className="score-modal-overlay" onClick={e => e.target === e.currentTarget && setScoreModal(null)}>
             <div className="score-modal-inner" style={{width:400,maxWidth:'95vw'}}>
               <h2>🏆 Game Over — Court {scoreModal.courtId}</h2>
+              {(() => {
+                const all = [...modalTeamA, ...modalTeamB];
+                const fCount = all.filter(p => p.gender === 'F').length;
+                const matchType = fCount === 2 ? '♀♂ Mixed Doubles' : fCount === 4 ? '♀ Women\'s Doubles' : '♂ Men\'s Doubles';
+                const matchColor = fCount === 2 ? '#f06292' : fCount === 4 ? '#f06292' : '#64b5f6';
+                return <div style={{fontSize:11,fontWeight:800,color:matchColor,textTransform:'uppercase',letterSpacing:1,marginTop:2,marginBottom:4}}>{matchType}</div>;
+              })()}
               <p style={{color:'var(--text-muted)',fontSize:13,marginTop:4}}>Swap players between teams if needed, then enter the score</p>
 
               {/* Player swap grid */}
@@ -1096,6 +3534,7 @@ function App() {
                       <React.Fragment key={i}>
                         {/* Team A player */}
                         <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--blue)44',display:'flex',alignItems:'center',gap:5}}>
+                          <GenderTag gender={pA.gender} />
                           <LevelBadge level={pA.level} />
                           <span style={{fontSize:12,fontWeight:600}}>{pA.name}</span>
                         </div>
@@ -1113,6 +3552,7 @@ function App() {
 
                         {/* Team B player */}
                         <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--orange)44',display:'flex',alignItems:'center',gap:5}}>
+                          <GenderTag gender={pB.gender} />
                           <LevelBadge level={pB.level} />
                           <span style={{fontSize:12,fontWeight:600}}>{pB.name}</span>
                         </div>
@@ -1126,6 +3566,7 @@ function App() {
                       <div style={{gridColumn:'1/-1',borderTop:'1px solid var(--border)',margin:'4px 0'}}></div>
                       <div style={{fontSize:10,color:'var(--text-dim)',textAlign:'center',gridColumn:'1/-1',marginBottom:2}}>cross-swap</div>
                       <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--blue)44',display:'flex',alignItems:'center',gap:5}}>
+                        <GenderTag gender={modalTeamA[0].gender} />
                         <LevelBadge level={modalTeamA[0].level} />
                         <span style={{fontSize:12,fontWeight:600}}>{modalTeamA[0].name}</span>
                       </div>
@@ -1137,11 +3578,13 @@ function App() {
                         onMouseOut={e=>{e.currentTarget.style.background='var(--surface3)';e.currentTarget.style.borderColor='var(--border)';}}
                       >⇄</button>
                       <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--orange)44',display:'flex',alignItems:'center',gap:5}}>
+                        <GenderTag gender={modalTeamB[1].gender} />
                         <LevelBadge level={modalTeamB[1].level} />
                         <span style={{fontSize:12,fontWeight:600}}>{modalTeamB[1].name}</span>
                       </div>
 
                       <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--blue)44',display:'flex',alignItems:'center',gap:5}}>
+                        <GenderTag gender={modalTeamA[1].gender} />
                         <LevelBadge level={modalTeamA[1].level} />
                         <span style={{fontSize:12,fontWeight:600}}>{modalTeamA[1].name}</span>
                       </div>
@@ -1153,6 +3596,7 @@ function App() {
                         onMouseOut={e=>{e.currentTarget.style.background='var(--surface3)';e.currentTarget.style.borderColor='var(--border)';}}
                       >⇄</button>
                       <div style={{background:'var(--surface3)',borderRadius:6,padding:'7px 8px',border:'1px solid var(--orange)44',display:'flex',alignItems:'center',gap:5}}>
+                        <GenderTag gender={modalTeamB[0].gender} />
                         <LevelBadge level={modalTeamB[0].level} />
                         <span style={{fontSize:12,fontWeight:600}}>{modalTeamB[0].name}</span>
                       </div>
@@ -1162,6 +3606,7 @@ function App() {
               </div>
 
               {/* Score inputs */}
+              {scoringEnabled && (
               <div className="score-inputs">
                 <div className="score-team">
                   <label>Team A<br/><span style={{color:'#e8f0fe'}}>{modalTeamA.map(p=>p.name).join(' & ')}</span></label>
@@ -1172,6 +3617,7 @@ function App() {
                   <input type="number" min="0" max="99" value={scoreB} onChange={e=>setScoreB(e.target.value)} placeholder="0" />
                 </div>
               </div>
+              )}
               <div className="modal-btns">
                 <button className="btn btn-green" style={{flex:1}} onClick={submitScore}>Save Score & Return Players</button>
                 <button className="btn btn-ghost" onClick={() => setScoreModal(null)}>Cancel</button>
