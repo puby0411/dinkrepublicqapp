@@ -6,7 +6,7 @@
 <title>DINK Republic Open Play</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a1628; color: var(--text-main); min-height: 100vh; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a1628; color: #e8f0fe; min-height: 100vh; }
   :root {
     --green: #00c853; --green-dim: #1a3a2a; --green-mid: #00963e;
     --gold: #ffd600; --gold-dim: #2a2200;
@@ -17,7 +17,6 @@
     --teal: #00bcd4; --teal-dim: #0a2228;
     --surface: #112240; --surface2: #172a4a; --surface3: #1e3560;
     --border: #2a4070; --text-muted: #7a9cc4; --text-dim: #4a6a94;
-    --text-main: #e8f0fe;
     --r: 8px;
   }
   .app { max-width: 1200px; margin: 0 auto; padding: 16px; }
@@ -66,7 +65,7 @@
   .queue-num { font-size: 11px; color: var(--text-dim); font-weight: 700; min-width: 20px; }
   .queue-name { flex: 1; font-size: 13px; font-weight: 600; }
   .add-player-form { display: flex; flex-direction: column; gap: 8px; }
-  input, select { background: var(--surface3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; color: var(--text-main); outline: none; width: 100%; }
+  input, select { background: var(--surface3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; color: #e8f0fe; outline: none; width: 100%; }
   input:focus, select:focus { border-color: var(--blue); }
   select option { background: #172a4a; }
   .controls-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; margin-bottom: 16px; }
@@ -87,7 +86,7 @@
   .player-stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
   .ps-name { font-weight: 700; font-size: 13px; }
   .ps-row { display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px; color: var(--text-muted); }
-  .ps-val { color: var(--text-main); font-weight: 600; }
+  .ps-val { color: #e8f0fe; font-weight: 600; }
   .score-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; }
   .score-modal-inner { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 360px; }
   .score-modal-inner h2 { font-size: 20px; margin-bottom: 6px; }
@@ -127,7 +126,7 @@
   .pair-divider { font-size: 9px; color: #ce93d8; font-weight: 800; letter-spacing: 1px; }
   .session-bar { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 14px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
   .session-info { display: flex; align-items: center; gap: 10px; }
-  .session-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+  .session-name { font-size: 13px; font-weight: 700; color: #e8f0fe; }
   .session-meta { font-size: 11px; color: var(--text-muted); }
   .session-actions { display: flex; gap: 6px; }
   .session-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; }
@@ -151,29 +150,6 @@
   .pair-select-item { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; transition: all 0.15s; }
   .pair-select-item:hover { border-color: var(--purple); }
   .pair-select-item.selected { border-color: var(--purple); background: var(--purple-dim); color: #ce93d8; }
-
-
-  /* ── Light mode theme override ───────────────────────────────────── */
-  body.light-theme {
-    background: #f2f4f9;
-    color: #1a2333;
-    --green: #0a9a45; --green-dim: #d7f5e1; --green-mid: #078235;
-    --gold: #b8860b; --gold-dim: #fbf0cf;
-    --blue: #1565c0; --blue-dim: #dceafd;
-    --red: #c62828; --red-dim: #fbdcdb;
-    --orange: #d16b00; --orange-dim: #fce6cc;
-    --purple: #7b1fa2; --purple-dim: #ecdcf5;
-    --teal: #00838f; --teal-dim: #d3f1f4;
-    --surface: #ffffff; --surface2: #f5f7fb; --surface3: #eaedf4;
-    --border: #d7dce6; --text-muted: #5b6478; --text-dim: #8791a3;
-    --text-main: #1a2333;
-  }
-  body.light-theme .badge-open { background: #e1f7e7; color: #0a7a34; border: 1px solid #00c85355; }
-  body.light-theme select option { background: #ffffff; color: #1a2333; }
-  body.light-theme .header h1 { color: var(--green); }
-  body.light-theme .win { color: var(--green); }
-  body.light-theme .lose { color: #c62828; }
-  body.light-theme .notification { box-shadow: 0 4px 20px rgba(10,154,69,0.15); }
 </style>
 </head>
 <body>
@@ -596,20 +572,6 @@ const INIT_PLAYERS = [{
   partnerId: null,
   gender: 'M'
 }];
-
-// Restore the last working session (players, waitlist, courts, history) from
-// localStorage so a page refresh doesn't wipe out live data. This is separate
-// from the explicit "Save Session" / "Load Session" feature, which snapshots
-// named sessions the user chooses to keep.
-const loadLiveState = () => {
-  try {
-    const raw = localStorage.getItem('dr_live_state');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
 function LevelBadge({
   level
 }) {
@@ -673,8 +635,6 @@ function PlayerListTab({
   setQueue,
   courts,
   showNotif,
-  exportWaitlistXLSX,
-  importWaitlistXLSX,
   addingPair,
   setAddingPair,
   newName,
@@ -753,47 +713,7 @@ function PlayerListTab({
     style: {
       marginBottom: 0
     }
-  }, "Master Player List — ", playerList.length, " players"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 6
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: exportWaitlistXLSX,
-    disabled: queue.length === 0,
-    title: "Export waitlist to Excel",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-      border: '1px solid var(--green)',
-      color: 'var(--green)',
-      opacity: queue.length === 0 ? 0.4 : 1
-    }
-  }, "⬇ Excel"), /*#__PURE__*/React.createElement("label", {
-    title: "Load players from Excel (.xlsx)",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-      padding: '5px 10px',
-      borderRadius: 'var(--r)',
-      fontSize: 11,
-      fontWeight: 600,
-      cursor: 'pointer',
-      background: 'var(--surface3)',
-      border: '1px solid var(--teal)',
-      color: 'var(--teal)'
-    }
-  }, "⬆ Load", /*#__PURE__*/React.createElement("input", {
-    type: "file",
-    accept: ".xlsx,.xls",
-    onChange: importWaitlistXLSX,
-    style: {
-      display: 'none'
-    }
-  })))), /*#__PURE__*/React.createElement("div", {
+  }, "Master Player List — ", playerList.length, " players")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: 'var(--text-muted)',
@@ -830,7 +750,7 @@ function PlayerListTab({
       border: '1px solid var(--border)',
       borderRadius: 6,
       fontSize: 12,
-      color: 'var(--text-main)',
+      color: '#e8f0fe',
       width: '100%'
     }
   }), playerListSearch && /*#__PURE__*/React.createElement("button", {
@@ -1144,7 +1064,7 @@ function PlayerListTab({
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
-      color: 'var(--text-main)',
+      color: '#e8f0fe',
       marginBottom: 4
     }
   }, "How it works"), /*#__PURE__*/React.createElement("div", null, "• Adding a player here adds them to both the master list and today's waitlist."), /*#__PURE__*/React.createElement("div", null, "• Click ", /*#__PURE__*/React.createElement("strong", {
@@ -1154,27 +1074,18 @@ function PlayerListTab({
   }, "+ Waitlist"), " to re-add a player to today's queue after they were removed."), /*#__PURE__*/React.createElement("div", null, "• Edit or remove players from the master list at any time."))));
 }
 function App() {
-  const [numCourts, setNumCourts] = useState(() => loadLiveState()?.numCourts ?? 3);
-  const [gameTime, setGameTime] = useState(() => loadLiveState()?.gameTime ?? 20);
-  const [matchMode, setMatchMode] = useState(() => loadLiveState()?.matchMode ?? 'Same Level');
-  // Open Level: when on (default), the algorithm forces a mixed-doubles round
-  // after 2 consecutive same-gender rounds. When off, it never forces mixed —
-  // gender composition is left entirely to whatever combo scores best.
-  const [forceMixedEnabled, setForceMixedEnabled] = useState(true);
-  const [queue, setQueue] = useState(() => loadLiveState()?.queue ?? INIT_PLAYERS);
-  const [courts, setCourts] = useState(() => {
-    const saved = loadLiveState();
-    if (saved?.courts) return saved.courts;
-    const n = saved?.numCourts ?? 3;
-    return Array.from({
-      length: n
-    }, (_, i) => ({
-      id: i + 1,
-      players: null,
-      startTime: null
-    }));
-  });
-  const [history, setHistory] = useState(() => loadLiveState()?.history ?? []);
+  const [numCourts, setNumCourts] = useState(3);
+  const [gameTime, setGameTime] = useState(20);
+  const [matchMode, setMatchMode] = useState('Same Level');
+  const [queue, setQueue] = useState(INIT_PLAYERS);
+  const [courts, setCourts] = useState(Array.from({
+    length: 3
+  }, (_, i) => ({
+    id: i + 1,
+    players: null,
+    startTime: null
+  })));
+  const [history, setHistory] = useState([]);
   const [newName, setNewName] = useState('');
   const [newLevel, setNewLevel] = useState('Open');
   const [newGender, setNewGender] = useState('M');
@@ -1184,21 +1095,6 @@ function App() {
   const [addingPair, setAddingPair] = useState(false);
   const [scoreModal, setScoreModal] = useState(null);
   const [scoringEnabled, setScoringEnabled] = useState(false);
-  const [winLoseEnabled, setWinLoseEnabled] = useState(false);
-  const [winLoseWinner, setWinLoseWinner] = useState(null);
-  const [lightMode, setLightMode] = useState(() => {
-    try {
-      return localStorage.getItem('dr_light_mode') === '1';
-    } catch {
-      return false;
-    }
-  });
-  useEffect(() => {
-    document.body.classList.toggle('light-theme', lightMode);
-    try {
-      localStorage.setItem('dr_light_mode', lightMode ? '1' : '0');
-    } catch {}
-  }, [lightMode]);
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
   const [modalTeamA, setModalTeamA] = useState([]);
@@ -1209,7 +1105,7 @@ function App() {
   const [manualCourt, setManualCourt] = useState(null);
   const [waitlistSearch, setWaitlistSearch] = useState('');
   const [playerListSearch, setPlayerListSearch] = useState('');
-  const [playerList, setPlayerList] = useState(() => loadLiveState()?.playerList ?? INIT_PLAYERS.map(p => ({
+  const [playerList, setPlayerList] = useState(INIT_PLAYERS.map(p => ({
     ...p
   })));
   const [manualSearch, setManualSearch] = useState('');
@@ -1303,27 +1199,6 @@ function App() {
   const joinRoundRef = useRef({}); // { playerId: roundNumber }
   const roundsFiredRef = useRef(0); // total games fired since session start
 
-  // On mount, if history was restored from the autosaved live state, rebuild
-  // the pairing-history/games-played/join-round tracking refs from it so
-  // matchmaking freshness scoring stays accurate after a page refresh.
-  useEffect(() => {
-    if (history && history.length) {
-      pairingHistory.current = {};
-      gamesPlayedRef.current = {};
-      joinRoundRef.current = {};
-      roundsFiredRef.current = 0;
-      history.forEach((g, idx) => {
-        phRecord(g.teamA, g.teamB);
-        [...g.teamA, ...g.teamB].forEach(p => {
-          if (joinRoundRef.current[p.id] === undefined) joinRoundRef.current[p.id] = idx;
-          gamesPlayedRef.current[p.id] = (gamesPlayedRef.current[p.id] || 0) + 1;
-        });
-        roundsFiredRef.current = idx + 1;
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Score a candidate match: sum of all pairings among the 4 players.
   // Lower = fresher. Partner pairs weighted 2× to more strongly avoid
   // repeating the same partner vs the same opponent.
@@ -1339,49 +1214,22 @@ function App() {
   // Secondary (tiebreak): total repeat count across all pairs.
   //   → Among combos with the same worst pair, prefer the one with fewer repeats overall.
   // Returns [maxRepeat, totalRepeats] — sort ascending on both.
-  // A fixed partner pair (linked via partnerId) has no choice but to repeat
-  // as partners every single game — that's not a matchmaking decision, so it
-  // must not count against them in the freshness score. Without this, a fixed
-  // pair's partner-repeat count goes to 1 after their very first game and
-  // never returns to 0, and since maxRepeat dominates the score, any fully
-  // fresh combo elsewhere in the queue will always outrank them — starving
-  // fixed pairs of games after round one. Opponent freshness still counts
-  // normally, so the algorithm still tries to give them new opponents.
-  const isFixedPair = (p0, p1) => p0?.partnerId === p1?.id || p1?.partnerId === p0?.id;
   const scoreMatch = (teamA, teamB) => {
-    const pairs = [...(isFixedPair(teamA[0], teamA[1]) ? [] : [phGet(teamA[0].id, teamA[1].id)]),
-    // partner A (skipped if fixed)
-    ...(isFixedPair(teamB[0], teamB[1]) ? [] : [phGet(teamB[0].id, teamB[1].id)]),
-    // partner B (skipped if fixed)
+    const pairs = [phGet(teamA[0].id, teamA[1].id),
+    // partner A
+    phGet(teamB[0].id, teamB[1].id),
+    // partner B
     phGet(teamA[0].id, teamB[0].id),
     // opponents
     phGet(teamA[0].id, teamB[1].id), phGet(teamA[1].id, teamB[0].id), phGet(teamA[1].id, teamB[1].id)];
-    const maxRepeat = pairs.length ? Math.max(...pairs) : 0;
+    const maxRepeat = Math.max(...pairs);
     const totalRepeats = pairs.reduce((s, v) => s + v, 0);
     // Pack into a single comparable number: maxRepeat dominates, totalRepeats breaks ties
     return maxRepeat * 1000 + totalRepeats;
   };
 
   // ── Requested games queue ────────────────────────────────────────────
-  const [requestedGames, setRequestedGames] = useState(() => loadLiveState()?.requestedGames ?? []); // [{ id, playerIds, addedAt }]
-
-  // Autosave the live working state (players, waitlist, courts, history) so
-  // a page refresh restores exactly where things were left off. This runs
-  // independently of the explicit named "Save Session" feature.
-  useEffect(() => {
-    try {
-      localStorage.setItem('dr_live_state', JSON.stringify({
-        numCourts,
-        gameTime,
-        matchMode,
-        queue,
-        courts,
-        history,
-        playerList,
-        requestedGames
-      }));
-    } catch {}
-  }, [numCourts, gameTime, matchMode, queue, courts, history, playerList, requestedGames]);
+  const [requestedGames, setRequestedGames] = useState([]); // [{ id, playerIds, addedAt }]
 
   // ── Pair-link modal (set/remove fixed partner on existing players) ───
   const [pairModal, setPairModal] = useState(null); // null | { playerId }
@@ -1470,7 +1318,6 @@ function App() {
             courts,
             gameTime,
             sessionName,
-            lightMode,
             upNext: computeUpNext()
           }, '*');
         } catch (err) {}
@@ -1478,7 +1325,7 @@ function App() {
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [courts, gameTime, sessionName, showUpNext, lightMode]);
+  }, [courts, gameTime, sessionName]);
 
   // Push state to preview window whenever courts/gameTime/sessionName change
   useEffect(() => {
@@ -1489,16 +1336,14 @@ function App() {
           courts,
           gameTime,
           sessionName,
-          lightMode,
           upNext: computeUpNext()
         }, '*');
       } catch (e) {}
     }
-  }, [courts, gameTime, sessionName, showUpNext, lightMode]);
+  }, [courts, gameTime, sessionName]);
 
   // Compute upNext matches for the preview window — mirrors the Up Next preview logic
   const computeUpNext = () => {
-    if (!showUpNext) return [];
     if (matchMode === 'Manual') return [];
     const upNextMatches = [];
     // Cap to first 20 players — avoids O(n⁴) hang with large rosters.
@@ -1511,7 +1356,7 @@ function App() {
       simAssignCount += 1;
       let forceMixed = false;
       if (matchMode === 'Same Level') forceMixed = simAssignCount % 3 === 0;
-      if (matchMode === 'Open Level') forceMixed = forceMixedEnabled && simOlStreak >= 2;
+      if (matchMode === 'Open Level') forceMixed = simOlStreak >= 2;
       if (matchMode === 'Skill Based') {
         simSbMixedCount += 1;
         forceMixed = simSbMixedCount % 3 === 0;
@@ -1544,7 +1389,6 @@ function App() {
           courts,
           gameTime,
           sessionName,
-          lightMode,
           upNext: computeUpNext()
         }, '*');
       } catch (e) {}
@@ -1559,8 +1403,7 @@ function App() {
     previewWinRef.current = win;
     const courtsSnap = courts,
       gtSnap = gameTime,
-      snSnap = sessionName,
-      lmSnap = lightMode;
+      snSnap = sessionName;
     const sendInitial = () => {
       try {
         win.postMessage({
@@ -1568,7 +1411,6 @@ function App() {
           courts: courtsSnap,
           gameTime: gtSnap,
           sessionName: snSnap,
-          lightMode: lmSnap,
           upNext: computeUpNext()
         }, '*');
       } catch (e) {}
@@ -1595,12 +1437,11 @@ function App() {
     --purple: #ce93d8; --purple-dim: #1a0a2a;
     --surface: #0d1f3c; --surface2: #112240; --surface3: #172a4a;
     --border: #1e3a6a; --text-muted: #6a8cb4;
-    --text-main: #e8f0fe;
   }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: #060f20;
-    color: var(--text-main);
+    color: #e8f0fe;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -1648,7 +1489,7 @@ function App() {
     font-size: 22px;
     font-weight: 900;
     letter-spacing: 0.5px;
-    color: var(--text-main);
+    color: #e8f0fe;
   }
   .court-num span { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-left: 4px; }
   .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: middle; }
@@ -1755,7 +1596,7 @@ function App() {
     padding: 18px 28px;
     text-align: center;
   }
-  .alert-pname { font-size: 40px; font-weight: 900; letter-spacing: 0.5px; color: var(--text-main); }
+  .alert-pname { font-size: 40px; font-weight: 900; letter-spacing: 0.5px; color: #e8f0fe; }
   .alert-close-btn {
     margin-top: 32px;
     padding: 16px 56px;
@@ -1772,96 +1613,9 @@ function App() {
   }
   .alert-close-btn:hover { background: #ffe033; transform: translateY(-2px); }
   .alert-close-btn:active { transform: translateY(0); }
-
-  /* ── Top Performer + Rank List preview overlays ──────────────────── */
-  .tp-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(6, 15, 32, 0.92);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    animation: fadeInBg 0.3s ease;
-  }
-  .tp-overlay.visible { display: flex; }
-  .tp-card {
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(160deg, #2a2200 0%, #1a1400 55%, #0d1f3c 100%);
-    border: 2px solid var(--gold);
-    border-radius: 22px;
-    padding: 48px 44px 40px;
-    text-align: center;
-    max-width: 460px;
-    width: 100%;
-    box-shadow: 0 0 90px rgba(255,214,0,0.25), 0 8px 40px rgba(0,0,0,0.6);
-    animation: tpPopIn 0.45s cubic-bezier(0.175,0.885,0.32,1.275);
-  }
-  @keyframes tpPopIn { from { opacity: 0; transform: scale(0.85) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-  .confetti-piece { position: absolute; top: -30px; font-size: 22px; opacity: 0.9; animation: confettiFall linear infinite; pointer-events: none; }
-  @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 8% { opacity: 1; } 100% { transform: translateY(520px) rotate(340deg); opacity: 0; } }
-  .tp-kicker { font-size: 13px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); opacity: 0.85; margin-bottom: 8px; }
-  .tp-trophy { font-size: 76px; line-height: 1; margin: 4px 0 12px; animation: tpTrophyBounce 1.1s ease-in-out infinite alternate; filter: drop-shadow(0 0 18px rgba(255,214,0,0.5)); }
-  @keyframes tpTrophyBounce { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-10px) rotate(3deg); } }
-  .tp-name { font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 4px; text-shadow: 0 2px 12px rgba(255,214,0,0.3); }
-  .tp-sub { font-size: 14px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 22px; }
-  .tp-stats-row { display: flex; justify-content: center; gap: 30px; margin-top: 6px; padding-top: 20px; border-top: 1px solid rgba(255,214,0,0.25); }
-  .tp-stat .val { font-size: 30px; font-weight: 900; color: #fff; line-height: 1; }
-  .tp-stat.tp-wins .val { color: var(--gold); }
-  .tp-stat .lbl { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; font-weight: 700; }
-  .tp-close-btn { margin-top: 28px; padding: 14px 44px; background: var(--gold); color: #000; border: none; border-radius: 12px; font-size: 14px; font-weight: 900; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: transform 0.1s, background 0.15s; }
-  .tp-close-btn:hover { background: #ffe033; transform: translateY(-2px); }
-  .rank-list-modal { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 26px; width: 480px; max-width: 100%; max-height: 82vh; display: flex; flex-direction: column; box-shadow: 0 8px 50px rgba(0,0,0,0.5); }
-  .rank-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .rank-list-title { font-size: 21px; font-weight: 800; color: var(--text-main); }
-  .rank-list-close-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 8px 18px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
-  .rank-list-close-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .rank-list-body { overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-  .rank-row { display: flex; align-items: center; gap: 12px; padding: 11px 10px; border-radius: 8px; }
-  .rank-row:nth-child(odd) { background: var(--surface2); }
-  .rank-num { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: var(--surface3); color: var(--text-muted); flex-shrink: 0; }
-  .rank-num.rank-1 { background: var(--gold); color: #000; }
-  .rank-num.rank-2 { background: #c7cedb; color: #000; }
-  .rank-num.rank-3 { background: #cd8a4a; color: #000; }
-  .rank-name { flex: 1; font-weight: 700; font-size: 16px; color: var(--text-main); }
-  .rank-wins { font-weight: 800; font-size: 15px; color: var(--green); white-space: nowrap; }
-
-  /* ── Light mode theme override (synced from main app) ───────────── */
-  body.light-theme {
-    background: #f2f4f9;
-    color: #1a2333;
-    --green: #0a9a45; --green-dim: #d7f5e1;
-    --gold: #b8860b; --gold-dim: #fbf0cf;
-    --blue: #1565c0; --blue-dim: #dceafd;
-    --red: #c62828;
-    --orange: #d16b00;
-    --purple: #7b1fa2; --purple-dim: #ecdcf5;
-    --surface: #ffffff; --surface2: #f5f7fb; --surface3: #eaedf4;
-    --border: #d7dce6; --text-muted: #5b6478;
-    --text-main: #1a2333;
-  }
-  body.light-theme .court-card.active { background: #eaf9ef; }
-  body.light-theme .court-card.open { border-color: #c7ceda; opacity: 0.7; }
-  body.light-theme .court-card.up-next { border-color: #c7ceda; opacity: 0.85; }
-  body.light-theme .dot-gray { background: #c7ceda; }
-  body.light-theme .badge-beg { background: var(--green-dim); color: var(--green); }
-  body.light-theme .badge-li { background: var(--blue-dim); color: var(--blue); }
-  body.light-theme .badge-int { background: #d3f1f4; color: #00838f; }
-  body.light-theme .badge-hi { background: var(--orange-dim); color: var(--orange); }
-  body.light-theme .badge-adv { background: var(--purple-dim); color: var(--purple); }
-  body.light-theme .open-label { color: #9aa4b8; }
-  body.light-theme #alert-overlay { background: rgba(242, 244, 249, 0.92); }
-  body.light-theme .alert-card { background: #ffffff; border-color: #b8860b; box-shadow: 0 0 60px rgba(184,134,11,0.18), 0 8px 40px rgba(0,0,0,0.15); }
-  body.light-theme .alert-court-label { color: #b8860b; }
-  body.light-theme .alert-subtitle { color: #5b6478; }
-  body.light-theme .alert-player-row { background: #f5f7fb; border-color: #d7dce6; }
-  body.light-theme .alert-close-btn { background: #b8860b; color: #fff; }
-  body.light-theme .alert-close-btn:hover { background: #cf9915; }
 </style>
 </he${""}ad>
-<bo${""}dy class="${lightMode ? 'light-theme' : ''}">
+<bo${""}dy>
 <header>
   <div>
     <h1>🏓 DINK Republic — Court Display</h1>
@@ -1880,33 +1634,6 @@ function App() {
     <div class="alert-subtitle">Game Starting Now</div>
     <div class="alert-players" id="alert-players"></div>
     <button class="alert-close-btn" onclick="closeAlert()">Got it!</button>
-  </div>
-</div>
-
-<!-- Top Performer celebratory overlay — triggered via postMessage from main app -->
-<div id="topperf-overlay" class="tp-overlay">
-  <div class="tp-card">
-    <div class="tp-kicker">🏆 Top Performer</div>
-    <div class="tp-trophy">🏆</div>
-    <div class="tp-name" id="tp-name">—</div>
-    <div class="tp-sub" id="tp-sub"></div>
-    <div class="tp-stats-row">
-      <div class="tp-stat tp-wins"><div class="val" id="tp-wins">0</div><div class="lbl">Wins</div></div>
-      <div class="tp-stat"><div class="val" id="tp-games">0</div><div class="lbl">Games</div></div>
-      <div class="tp-stat"><div class="val" id="tp-winrate">0%</div><div class="lbl">Win Rate</div></div>
-    </div>
-    <button class="tp-close-btn" onclick="closeTopPerformer()">Nice!</button>
-  </div>
-</div>
-
-<!-- Rank List preview overlay — triggered via postMessage from main app -->
-<div id="ranklist-overlay" class="tp-overlay">
-  <div class="rank-list-modal">
-    <div class="rank-list-header">
-      <div class="rank-list-title">📋 Rank List — Wins</div>
-      <button class="rank-list-close-btn" onclick="closeRankList()">Close</button>
-    </div>
-    <div class="rank-list-body" id="rank-list-body"></div>
   </div>
 </div>
 
@@ -2021,7 +1748,6 @@ window.addEventListener('message', (e) => {
       courtsData = e.data.courts || [];
       gameTimeLimit = e.data.gameTime || 20;
       upNextData = e.data.upNext || [];
-      document.body.classList.toggle('light-theme', !!e.data.lightMode);
       const sn = document.getElementById('session-name');
       if (sn) sn.textContent = e.data.sessionName || 'Live Court View';
       renderCourts();
@@ -2044,72 +1770,12 @@ window.addEventListener('message', (e) => {
       window._alertTimer = setTimeout(() => overlay.classList.remove('visible'), 12000);
     } catch(err) {}
   }
-
-  // ── Top Performer celebratory overlay ────────────────────────────
-  if (e.data && e.data.type === 'DR_TOP_PERFORMER') {
-    try {
-      const tp = e.data.topPerformer;
-      const card = document.querySelector('#topperf-overlay .tp-card');
-      card.querySelectorAll('.confetti-piece').forEach(el => el.remove());
-      const emojis = ['🎉','✨','🎊','🏓','⭐','🎉','✨','🏓'];
-      emojis.forEach((em, i) => {
-        const span = document.createElement('span');
-        span.className = 'confetti-piece';
-        span.textContent = em;
-        span.style.left = (i * 12 % 100) + '%';
-        span.style.animationDuration = (2.4 + i % 4 * 0.6) + 's';
-        span.style.animationDelay = (i * 0.3) + 's';
-        card.insertBefore(span, card.firstChild);
-      });
-      if (!tp) {
-        document.getElementById('tp-name').textContent = 'No games yet';
-        document.getElementById('tp-sub').textContent = 'Complete a game to crown a Top Performer';
-        document.getElementById('tp-wins').textContent = '0';
-        document.getElementById('tp-games').textContent = '0';
-        document.getElementById('tp-winrate').textContent = '0%';
-      } else {
-        document.getElementById('tp-name').textContent = tp.name;
-        document.getElementById('tp-sub').textContent = (tp.level || '') + ' · ' + (tp.gender === 'F' ? 'Women' : 'Men');
-        document.getElementById('tp-wins').textContent = tp.wins;
-        document.getElementById('tp-games').textContent = tp.games;
-        document.getElementById('tp-winrate').textContent = tp.games ? Math.round(tp.wins / tp.games * 100) + '%' : '0%';
-      }
-      document.getElementById('topperf-overlay').classList.add('visible');
-    } catch(err) {}
-  }
-
-  // ── Rank List preview overlay ────────────────────────────────────
-  if (e.data && e.data.type === 'DR_RANK_LIST') {
-    try {
-      const players = e.data.rankedPlayers || [];
-      const body = document.getElementById('rank-list-body');
-      if (!players.length) {
-        body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:28px 0;">Complete games to build the rank list!</div>';
-      } else {
-        body.innerHTML = players.map((p, i) => {
-          const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
-          return '<div class="rank-row"><div class="rank-num ' + cls + '">' + (i + 1) + '</div><div class="rank-name">' + p.name + '</div><div class="rank-wins">' + p.wins + ' win' + (p.wins === 1 ? '' : 's') + '</div></div>';
-        }).join('');
-      }
-      document.getElementById('ranklist-overlay').classList.add('visible');
-    } catch(err) {}
-  }
 });
 
 function closeAlert() {
   const overlay = document.getElementById('alert-overlay');
   if (overlay) overlay.classList.remove('visible');
   if (window._alertTimer) clearTimeout(window._alertTimer);
-}
-
-function closeTopPerformer() {
-  const overlay = document.getElementById('topperf-overlay');
-  if (overlay) overlay.classList.remove('visible');
-}
-
-function closeRankList() {
-  const overlay = document.getElementById('ranklist-overlay');
-  if (overlay) overlay.classList.remove('visible');
 }
 
 // Ask parent for data on load
@@ -2229,17 +1895,6 @@ renderCourts();
     notifTimer.current = setTimeout(() => setNotification(null), 3000);
   };
   const updateCourts = n => {
-    // Adding courts is always allowed. Removing a court that has an ongoing
-    // game is blocked outright — no override — to avoid losing live games.
-    if (n < courts.length) {
-      const removedCourts = courts.slice(n);
-      const activeRemoved = removedCourts.filter(c => c.players);
-      if (activeRemoved.length > 0) {
-        const courtLabel = activeRemoved.length > 1 ? `Courts ${activeRemoved.map(c => c.id).join(', ')} have` : `Court ${activeRemoved[0].id} has`;
-        showNotif(`${courtLabel} an ongoing game — end it before reducing the number of courts.`);
-        return;
-      }
-    }
     setNumCourts(n);
     setCourts(prev => {
       if (n > prev.length) {
@@ -2402,15 +2057,6 @@ renderCourts();
       if (pinned.length === 4) sorted = pinned;
     }
 
-    // Queue position map: lower index = waited longer. Shared across all
-    // modes so Same Level and Skill Based can also prioritize combos where
-    // everyone has waited a while, not just Open Level (which already did).
-    const qpos = {};
-    sorted.forEach((p, i) => {
-      qpos[p.id] = i;
-    });
-    const worstQposIds = ids => Math.max(...ids.map(id => qpos[id] ?? 999));
-
     // ── Freshness scoring ─────────────────────────────────────────────
     // Collect ALL valid candidates then pick the one with the lowest
     // repeat-pairing score. This mirrors PickleMixer's core logic:
@@ -2419,25 +2065,14 @@ renderCourts();
     // To preserve queue-order fairness we only search combos that include
     // the first available player (sorted[0]), so no one waits forever.
     // For priorityIds we search all combos among those 4 only.
-    //
-    // Wait time is checked BEFORE freshness: among all valid candidates,
-    // prefer the group where the most-recently-joined member has still
-    // waited the longest (lowest worst-queue-position), and only use
-    // pairing freshness to break ties within that. Without this, freshness
-    // alone can quietly keep passing over the same players once the group
-    // is small enough that most repeat scores look similar.
     const pickBest = candidates => {
       if (!candidates.length) return null;
-      let best = candidates[0];
-      let bestWait = worstQposIds(best.ids);
-      let bestScore = scoreMatch(best.teamA, best.teamB);
+      let best = candidates[0],
+        bestScore = scoreMatch(best.teamA, best.teamB);
       for (let ci = 1; ci < candidates.length; ci++) {
-        const c = candidates[ci];
-        const wait = worstQposIds(c.ids);
-        const s = scoreMatch(c.teamA, c.teamB);
-        if (wait < bestWait || wait === bestWait && s < bestScore) {
-          best = c;
-          bestWait = wait;
+        const s = scoreMatch(candidates[ci].teamA, candidates[ci].teamB);
+        if (s < bestScore) {
+          best = candidates[ci];
           bestScore = s;
         }
       }
@@ -2456,6 +2091,11 @@ renderCourts();
       const pool = sorted.slice(0, 20);
       const splits = [[0, 1, 2, 3], [0, 2, 1, 3], [0, 3, 1, 2]];
 
+      // Queue position map: lower index = waited longer
+      const qpos = {};
+      sorted.forEach((p, i) => {
+        qpos[p.id] = i;
+      });
       const levelBalance = (tA, tB) => {
         const lvl = p => LEVEL_IDX[p.level] ?? 1;
         const avgA = tA.reduce((s, p) => s + lvl(p), 0) / tA.length;
@@ -2466,7 +2106,7 @@ renderCourts();
       // Worst (highest) queue position in the group — lower is better.
       // This penalises combos that include someone who just joined or returned,
       // naturally surfacing groups where everyone has waited a long time.
-      const worstQpos = players => worstQposIds(players.map(p => p.id));
+      const worstQpos = players => Math.max(...players.map(p => qpos[p.id] ?? 999));
       const bestSplitForCombo = players => {
         const fc = players.filter(p => p.gender === 'F').length;
         const candidates = [];
@@ -2672,8 +2312,6 @@ renderCourts();
 
   // ── Pair-link helpers (set/remove fixed partner on existing players) ──
   const linkPartners = (idA, idB) => {
-    const pA = queue.find(p => p.id === idA);
-    const pB = queue.find(p => p.id === idB);
     setQueue(prev => prev.map(p => {
       if (p.id === idA) return {
         ...p,
@@ -2685,11 +2323,7 @@ renderCourts();
       };
       return p;
     }));
-    if (pA && pB && pA.level !== pB.level && pA.level !== 'Open' && pB.level !== 'Open') {
-      showNotif(`Fixed pair linked! Heads up: ${pA.level} + ${pB.level} won't be matched in Same Level mode until levels match.`);
-    } else {
-      showNotif('Fixed pair linked!');
-    }
+    showNotif('Fixed pair linked!');
   };
   const unlinkPartner = id => {
     setQueue(prev => {
@@ -2725,7 +2359,7 @@ renderCourts();
       forceMixed = assignCount.current % 3 === 0;
     }
     if (matchMode === 'Open Level') {
-      forceMixed = forceMixedEnabled && olSameGenderStreak.current >= 2;
+      forceMixed = olSameGenderStreak.current >= 2;
     }
     if (matchMode === 'Skill Based') {
       sbMixedCount.current += 1;
@@ -2859,7 +2493,7 @@ renderCourts();
         localAssignCount += 1;
         let forceMixed = false;
         if (matchMode === 'Same Level') forceMixed = localAssignCount % 3 === 0;
-        if (matchMode === 'Open Level') forceMixed = forceMixedEnabled && localOlStreak >= 2;
+        if (matchMode === 'Open Level') forceMixed = localOlStreak >= 2;
         if (matchMode === 'Skill Based') {
           localSbMixedCount += 1;
           forceMixed = localSbMixedCount % 3 === 0;
@@ -2995,7 +2629,6 @@ renderCourts();
     setModalTeamB([...court.players.teamB]);
     setScoreA('');
     setScoreB('');
-    setWinLoseWinner(null);
   };
 
   // Swap two players on a court (used during live rearrange)
@@ -3016,35 +2649,6 @@ renderCourts();
         }
       };
     }));
-  };
-
-  // Move (or swap) a court's current game to another court.
-  // If the target court is empty, the game simply moves there.
-  // If the target court already has an active game, the two courts swap games.
-  const moveGameToCourt = (fromCourtId, toCourtId) => {
-    if (fromCourtId === toCourtId) return;
-    const fromCourt = courts.find(c => c.id === fromCourtId);
-    const toCourt = courts.find(c => c.id === toCourtId);
-    if (!fromCourt?.players) return;
-    const wasSwap = !!toCourt?.players;
-    setCourts(prev => prev.map(c => {
-      if (c.id === fromCourtId) {
-        return {
-          ...c,
-          players: toCourt?.players || null,
-          startTime: toCourt?.players ? toCourt.startTime : null
-        };
-      }
-      if (c.id === toCourtId) {
-        return {
-          ...c,
-          players: fromCourt.players,
-          startTime: fromCourt.startTime
-        };
-      }
-      return c;
-    }));
-    showNotif(wasSwap ? `Swapped games between Court ${fromCourtId} and Court ${toCourtId}!` : `Moved game from Court ${fromCourtId} to Court ${toCourtId}!`);
   };
 
   // Replace a player on a court with a player from the queue.
@@ -3130,10 +2734,6 @@ renderCourts();
   };
   const submitScore = () => {
     if (!scoreModal) return;
-    if (!scoringEnabled && winLoseEnabled && !winLoseWinner) {
-      showNotif('Select who won first!');
-      return;
-    }
     const sA = scoringEnabled ? parseInt(scoreA) || 0 : 0;
     const sB = scoringEnabled ? parseInt(scoreB) || 0 : 0;
     const {
@@ -3141,7 +2741,7 @@ renderCourts();
       startTime
     } = scoreModal;
     const duration = startTime ? Math.floor((Date.now() - startTime) / 60000) : 0;
-    const winner = scoringEnabled ? sA > sB ? 'A' : sB > sA ? 'B' : 'tie' : winLoseEnabled && winLoseWinner ? winLoseWinner : 'tie';
+    const winner = sA > sB ? 'A' : sB > sA ? 'B' : 'tie';
 
     // Record pairings BEFORE updating state so history is live for next findMatch
     phRecord(modalTeamA, modalTeamB);
@@ -3296,11 +2896,7 @@ renderCourts();
       });
       setNewName('');
       setNewPartnerName('');
-      if (newLevel !== newPartnerLevel && newLevel !== 'Open' && newPartnerLevel !== 'Open') {
-        showNotif(`${p1.name} & ${p2.name} added as a fixed pair! Heads up: ${newLevel} + ${newPartnerLevel} won't be matched in Same Level mode until levels match.`);
-      } else {
-        showNotif(`${p1.name} & ${p2.name} added as a fixed pair!`);
-      }
+      showNotif(`${p1.name} & ${p2.name} added as a fixed pair!`);
     } else {
       const p = {
         id: uid(),
@@ -3491,13 +3087,6 @@ renderCourts();
       playerStats[id].against += team === 'A' ? g.scoreB : g.scoreA;
     });
   });
-  // Ranked leaderboard (by wins, then games played) — powers the Rank List
-  // and Top Performer preview modals.
-  const rankedPlayers = Object.entries(playerStats).map(([id, s]) => ({
-    id,
-    ...s
-  })).sort((a, b) => b.wins - a.wins || b.games - a.games);
-  const topPerformer = rankedPlayers[0] || null;
   const exportHistoryCSV = () => {
     const headers = ['#', 'Time', 'Court', 'Team A Players', 'Team A Levels', 'Score A', 'Score B', 'Team B Players', 'Team B Levels', 'Winner', 'Duration (min)'];
     const rows = [...history].reverse().map((g, i) => [history.length - i, g.time, `Court ${g.courtId}`, g.teamA.map(p => p.name).join(' & '), g.teamA.map(p => p.level).join(' & '), g.scoreA, g.scoreB, g.teamB.map(p => p.name).join(' & '), g.teamB.map(p => p.level).join(' & '), g.winner === 'tie' ? 'Tie' : `Team ${g.winner}`, g.duration]);
@@ -3533,39 +3122,6 @@ renderCourts();
     URL.revokeObjectURL(url);
     showNotif('Player stats exported to CSV!');
   };
-
-  // Send Top Performer / Rank List previews to the TV/display preview screen
-  // instead of showing them on the main screen.
-  const sendStatsToPreview = payload => {
-    const sendTo = win => {
-      try {
-        win.postMessage(payload, '*');
-      } catch (e) {}
-    };
-    if (previewWinRef.current && !previewWinRef.current.closed) {
-      sendTo(previewWinRef.current);
-    } else {
-      openPreviewWindow();
-      const attempts = [600, 1200, 2000];
-      attempts.forEach(ms => setTimeout(() => {
-        if (previewWinRef.current && !previewWinRef.current.closed) sendTo(previewWinRef.current);
-      }, ms));
-    }
-  };
-  const sendTopPerformerToPreview = () => {
-    sendStatsToPreview({
-      type: 'DR_TOP_PERFORMER',
-      topPerformer
-    });
-    showNotif('Top Performer sent to preview screen!');
-  };
-  const sendRankListToPreview = () => {
-    sendStatsToPreview({
-      type: 'DR_RANK_LIST',
-      rankedPlayers
-    });
-    showNotif('Rank List sent to preview screen!');
-  };
   return /*#__PURE__*/React.createElement("div", {
     className: "app"
   }, notification && /*#__PURE__*/React.createElement("div", {
@@ -3595,10 +3151,6 @@ renderCourts();
   }))))), /*#__PURE__*/React.createElement("div", {
     className: "session-actions"
   }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => setLightMode(v => !v),
-    title: lightMode ? "Switch to dark mode" : "Switch to light mode"
-  }, lightMode ? "🌙 Dark" : "☀️ Light"), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-ghost btn-sm",
     onClick: () => setSessionModal('load'),
     title: "Load a saved session"
@@ -3669,10 +3221,7 @@ renderCourts();
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
     checked: scoringEnabled,
-    onChange: e => {
-      setScoringEnabled(e.target.checked);
-      if (e.target.checked) setWinLoseEnabled(false);
-    },
+    onChange: e => setScoringEnabled(e.target.checked),
     style: {
       accentColor: 'var(--green)',
       width: 13,
@@ -3680,36 +3229,6 @@ renderCourts();
       cursor: 'pointer'
     }
   }), "🏆 Scoring"), /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5,
-      cursor: 'pointer',
-      fontSize: 12,
-      fontWeight: 600,
-      color: winLoseEnabled ? 'var(--gold)' : 'var(--text-muted)',
-      background: winLoseEnabled ? 'var(--gold-dim)' : 'var(--surface3)',
-      border: `1px solid ${winLoseEnabled ? '#ffd60055' : 'var(--border)'}`,
-      borderRadius: 6,
-      padding: '5px 10px',
-      transition: 'all 0.15s',
-      whiteSpace: 'nowrap'
-    },
-    title: "When enabled, record who won without entering a score"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: winLoseEnabled,
-    onChange: e => {
-      setWinLoseEnabled(e.target.checked);
-      if (e.target.checked) setScoringEnabled(false);
-    },
-    style: {
-      accentColor: 'var(--gold)',
-      width: 13,
-      height: 13,
-      cursor: 'pointer'
-    }
-  }), "🥇 Win/Lose"), /*#__PURE__*/React.createElement("label", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -3804,31 +3323,7 @@ renderCourts();
     key: m,
     className: `mode-btn ${matchMode === m ? 'active' : ''}`,
     onClick: () => setMatchMode(m)
-  }, m))), matchMode === 'Open Level' && /*#__PURE__*/React.createElement("div", {
-    className: "ctrl-group"
-  }, /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5,
-      cursor: 'pointer',
-      fontSize: 11,
-      fontWeight: 600,
-      color: forceMixedEnabled ? 'var(--text-muted)' : 'var(--orange)',
-      whiteSpace: 'nowrap'
-    },
-    title: forceMixedEnabled ? "Forces a mixed-doubles round after 2 same-gender rounds in a row. Uncheck to never force mixed." : "Gender rotation is off — mixed rounds will only happen if they naturally score best."
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: forceMixedEnabled,
-    onChange: e => setForceMixedEnabled(e.target.checked),
-    style: {
-      accentColor: 'var(--orange)',
-      width: 13,
-      height: 13,
-      cursor: 'pointer'
-    }
-  }), forceMixedEnabled ? "🔀 Forced Mixed Rotation" : "🔀 Mixed Rotation Off")), /*#__PURE__*/React.createElement("button", {
+  }, m))), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-green btn-sm",
     style: {
       marginLeft: 'auto'
@@ -4235,32 +3730,7 @@ renderCourts();
       setRearrangeCourt(null);
       endGame(court.id);
     }
-  }, "End & Score")), rearrangeCourt !== court.id && courts.length > 1 && /*#__PURE__*/React.createElement("select", {
-    value: "",
-    title: "Move this game to another court",
-    onChange: e => {
-      const targetId = parseInt(e.target.value, 10);
-      if (targetId) moveGameToCourt(court.id, targetId);
-      e.target.value = "";
-    },
-    style: {
-      width: '100%',
-      marginTop: 6,
-      cursor: 'pointer',
-      background: 'var(--surface3)',
-      color: 'var(--text-muted)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--r)',
-      padding: '5px 10px',
-      fontSize: 11,
-      fontWeight: 600
-    }
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "⇄ Move to another court…"), courts.filter(c => c.id !== court.id).map(c => /*#__PURE__*/React.createElement("option", {
-    key: c.id,
-    value: c.id
-  }, c.players ? `Swap with Court ${c.id}` : `Move to Court ${c.id}`)))) : /*#__PURE__*/React.createElement(React.Fragment, null, [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("div", {
+  }, "End & Score"))) : /*#__PURE__*/React.createElement(React.Fragment, null, [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "player-slot empty"
   }, "open slot")), matchMode === 'Manual' && queue.length >= 4 && (manualCourt === court.id ? /*#__PURE__*/React.createElement("div", {
@@ -4299,7 +3769,7 @@ renderCourts();
       background: 'var(--surface3)',
       border: '1px solid var(--border)',
       borderRadius: 6,
-      color: 'var(--text-main)',
+      color: '#e8f0fe',
       width: '100%'
     }
   }), manualSearch && /*#__PURE__*/React.createElement("button", {
@@ -4565,7 +4035,47 @@ renderCourts();
     style: {
       marginBottom: 0
     }
-  }, "Waitlist — ", queue.length, " players")), /*#__PURE__*/React.createElement("div", {
+  }, "Waitlist — ", queue.length, " players"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: exportWaitlistXLSX,
+    disabled: queue.length === 0,
+    title: "Export waitlist to Excel",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      border: '1px solid var(--green)',
+      color: 'var(--green)',
+      opacity: queue.length === 0 ? 0.4 : 1
+    }
+  }, "⬇ Excel"), /*#__PURE__*/React.createElement("label", {
+    title: "Load players from Excel (.xlsx)",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      padding: '5px 10px',
+      borderRadius: 'var(--r)',
+      fontSize: 11,
+      fontWeight: 600,
+      cursor: 'pointer',
+      background: 'var(--surface3)',
+      border: '1px solid var(--teal)',
+      color: 'var(--teal)'
+    }
+  }, "⬆ Load", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".xlsx,.xls",
+    onChange: importWaitlistXLSX,
+    style: {
+      display: 'none'
+    }
+  })))), /*#__PURE__*/React.createElement("div", {
     style: {
       position: 'relative',
       marginBottom: 10
@@ -4591,7 +4101,7 @@ renderCourts();
       border: '1px solid var(--border)',
       borderRadius: 6,
       fontSize: 12,
-      color: 'var(--text-main)',
+      color: '#e8f0fe',
       width: '100%'
     }
   }), waitlistSearch && /*#__PURE__*/React.createElement("button", {
@@ -4724,7 +4234,7 @@ renderCourts();
           borderRadius: 5,
           border: '1px solid var(--blue)',
           background: 'var(--surface)',
-          color: 'var(--text-main)',
+          color: '#e8f0fe',
           outline: 'none',
           minWidth: 0
         }
@@ -4737,7 +4247,7 @@ renderCourts();
           borderRadius: 5,
           border: '1px solid var(--blue)',
           background: 'var(--surface)',
-          color: 'var(--text-main)',
+          color: '#e8f0fe',
           outline: 'none',
           width: 'auto'
         }
@@ -4755,13 +4265,7 @@ renderCourts();
           cursor: 'pointer'
         },
         onClick: () => unlinkPartner(p.id)
-      }, "🔗 ", partner.name, " ✕"), partner && p.level !== partner.level && p.level !== 'Open' && partner.level !== 'Open' && /*#__PURE__*/React.createElement("span", {
-        title: `${p.level} + ${partner.level} — this pair won't be matched in Same Level mode until their levels match or you switch modes`,
-        style: {
-          fontSize: 13,
-          cursor: 'help'
-        }
-      }, "⚠️"), /*#__PURE__*/React.createElement("span", {
+      }, "🔗 ", partner.name, " ✕"), /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: 10,
           color: 'var(--text-muted)',
@@ -5031,8 +4535,6 @@ renderCourts();
     setQueue: setQueue,
     courts: courts,
     showNotif: showNotif,
-    exportWaitlistXLSX: exportWaitlistXLSX,
-    importWaitlistXLSX: importWaitlistXLSX,
     addingPair: addingPair,
     setAddingPair: setAddingPair,
     newName: newName,
@@ -5279,7 +4781,7 @@ renderCourts();
         background: 'var(--surface3)',
         border: '1px solid var(--border)',
         borderRadius: 6,
-        color: 'var(--text-main)',
+        color: '#e8f0fe',
         width: '100%'
       }
     }), reqSearch && /*#__PURE__*/React.createElement("button", {
@@ -5331,7 +4833,7 @@ renderCourts();
           style: {
             borderColor: sel ? 'var(--orange)' : onCourt ? 'var(--blue)44' : 'var(--border)',
             background: sel ? 'var(--orange-dim)' : onCourt ? 'var(--blue-dim)' : 'transparent',
-            color: sel ? 'var(--orange)' : 'var(--text-main)'
+            color: sel ? 'var(--orange)' : '#e8f0fe'
           },
           onClick: () => {
             if (sel) setReqSelected(prev => prev.filter(id => id !== p.id));else if (reqSelected.length < 4) setReqSelected(prev => [...prev, p.id]);
@@ -5599,7 +5101,7 @@ renderCourts();
       background: 'var(--surface3)',
       border: '1px solid var(--border)',
       borderRadius: 6,
-      color: 'var(--text-main)',
+      color: '#e8f0fe',
       width: '100%'
     }
   }), pairSearch && /*#__PURE__*/React.createElement("button", {
@@ -5871,33 +5373,7 @@ renderCourts();
     style: {
       marginBottom: 0
     }
-  }, "Player Statistics — ", Object.keys(playerStats).length, " players"), Object.keys(playerStats).length > 0 && /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 6,
-      flexWrap: 'wrap'
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-gold btn-sm",
-    onClick: sendTopPerformerToPreview,
-    title: "Show a celebratory Top Performer card on the preview screen",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5
-    }
-  }, "🏆 Top Performer"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: sendRankListToPreview,
-    title: "Show the win-rank leaderboard on the preview screen",
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5,
-      border: '1px solid var(--blue)',
-      color: 'var(--blue)'
-    }
-  }, "📋 Rank List"), /*#__PURE__*/React.createElement("button", {
+  }, "Player Statistics — ", Object.keys(playerStats).length, " players"), Object.keys(playerStats).length > 0 && /*#__PURE__*/React.createElement("button", {
     className: "btn btn-ghost btn-sm",
     onClick: exportStatsCSV,
     style: {
@@ -5907,7 +5383,7 @@ renderCourts();
       border: '1px solid var(--green)',
       color: 'var(--green)'
     }
-  }, "⬇ Export CSV"))), Object.keys(playerStats).length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, "⬇ Export CSV")), Object.keys(playerStats).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "empty-state"
   }, "Complete games to see player stats here!") : /*#__PURE__*/React.createElement("div", {
     style: {
@@ -6537,13 +6013,13 @@ renderCourts();
         fontSize: 12,
         fontWeight: 600
       }
-    }, modalTeamB[0].name))))), scoringEnabled ? /*#__PURE__*/React.createElement("div", {
+    }, modalTeamB[0].name))))), scoringEnabled && /*#__PURE__*/React.createElement("div", {
       className: "score-inputs"
     }, /*#__PURE__*/React.createElement("div", {
       className: "score-team"
     }, /*#__PURE__*/React.createElement("label", null, "Team A", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
       style: {
-        color: 'var(--text-main)'
+        color: '#e8f0fe'
       }
     }, modalTeamA.map(p => p.name).join(' & '))), /*#__PURE__*/React.createElement("input", {
       type: "number",
@@ -6557,7 +6033,7 @@ renderCourts();
       className: "score-team"
     }, /*#__PURE__*/React.createElement("label", null, "Team B", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
       style: {
-        color: 'var(--text-main)'
+        color: '#e8f0fe'
       }
     }, modalTeamB.map(p => p.name).join(' & '))), /*#__PURE__*/React.createElement("input", {
       type: "number",
@@ -6566,53 +6042,7 @@ renderCourts();
       value: scoreB,
       onChange: e => setScoreB(e.target.value),
       placeholder: "0"
-    }))) : winLoseEnabled ? /*#__PURE__*/React.createElement("div", {
-      className: "score-inputs"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setWinLoseWinner('A'),
-      className: "score-team",
-      style: {
-        cursor: 'pointer',
-        border: winLoseWinner === 'A' ? '2px solid var(--gold)' : '1px solid var(--border)',
-        background: winLoseWinner === 'A' ? 'var(--gold-dim)' : 'var(--surface2)',
-        borderRadius: 8,
-        padding: '10px'
-      }
-    }, /*#__PURE__*/React.createElement("label", null, "Team A", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: 'var(--text-main)'
-      }
-    }, modalTeamA.map(p => p.name).join(' & '))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 22,
-        marginTop: 6,
-        color: winLoseWinner === 'A' ? 'var(--gold)' : 'var(--text-muted)',
-        fontWeight: 700
-      }
-    }, winLoseWinner === 'A' ? '🏆 Won' : 'Tap if won')), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setWinLoseWinner('B'),
-      className: "score-team",
-      style: {
-        cursor: 'pointer',
-        border: winLoseWinner === 'B' ? '2px solid var(--gold)' : '1px solid var(--border)',
-        background: winLoseWinner === 'B' ? 'var(--gold-dim)' : 'var(--surface2)',
-        borderRadius: 8,
-        padding: '10px'
-      }
-    }, /*#__PURE__*/React.createElement("label", null, "Team B", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: 'var(--text-main)'
-      }
-    }, modalTeamB.map(p => p.name).join(' & '))), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 22,
-        marginTop: 6,
-        color: winLoseWinner === 'B' ? 'var(--gold)' : 'var(--text-muted)',
-        fontWeight: 700
-      }
-    }, winLoseWinner === 'B' ? '🏆 Won' : 'Tap if won'))) : null, /*#__PURE__*/React.createElement("div", {
+    }))), /*#__PURE__*/React.createElement("div", {
       className: "modal-btns"
     }, /*#__PURE__*/React.createElement("button", {
       className: "btn btn-green",
