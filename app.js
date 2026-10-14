@@ -1834,6 +1834,39 @@ function App() {
   // in match selection (all modes). Default false preserves original behavior
   // where wait time is protected first and freshness only breaks ties.
   const [prioritizeFreshness, setPrioritizeFreshness] = useState(false);
+  // Open Level "Stricter Level": prefer matches where all 4 players are within
+  // one level of each other (e.g. no Beginner and Intermediate on the same
+  // court), among the players already in the waiting group. Remembered on
+  // this computer.
+  const [strictLevel, setStrictLevel] = useState(() => {
+    try {
+      return localStorage.getItem('dr_strict_level') === '1';
+    } catch {
+      return false;
+    }
+  });
+  // Open Level "Avoid 3W+1M": prefer matches that aren't 3 women + 1 man,
+  // among the players already in the waiting group. On by default; remembered
+  // on this computer.
+  const [avoid3W1M, setAvoid3W1M] = useState(() => {
+    try {
+      return localStorage.getItem('dr_avoid_3w1m') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const toggleAvoid3W1M = on => {
+    setAvoid3W1M(on);
+    try {
+      localStorage.setItem('dr_avoid_3w1m', on ? '1' : '0');
+    } catch {}
+  };
+  const toggleStrictLevel = on => {
+    setStrictLevel(on);
+    try {
+      localStorage.setItem('dr_strict_level', on ? '1' : '0');
+    } catch {}
+  };
   const [queue, setQueue] = useState(() => loadLiveState()?.queue ?? INIT_PLAYERS);
   const [courts, setCourts] = useState(() => {
     const saved = loadLiveState();
@@ -3595,6 +3628,16 @@ renderCourts();
             levelBal: levelBalance(tA, tB),
             // "Close enough" balance: any gap within OL_LEVEL_TOLERANCE counts as balanced (0)
             levelBand: levelBalance(tA, tB) <= OL_LEVEL_TOLERANCE + 1e-9 ? 0 : levelBalance(tA, tB),
+            // 3 women + 1 man (ranked lower when Avoid 3W+1M is on)
+            threeW: fc === 3 ? 1 : 0,
+            // Level spread of all 4 players (highest − lowest). 0 or 1 = fine;
+            // 2+ (e.g. Beginner with Intermediate) is ranked lower when
+            // Stricter Level is on.
+            spreadBad: (() => {
+              const ix = players.map(p => LEVEL_IDX[p.level] ?? LEVEL_IDX[DEFAULT_LEVEL]);
+              const sp = Math.max(...ix) - Math.min(...ix);
+              return sp > 1 ? sp : 0;
+            })(),
             // Most players in this group whose last game was the SAME game
             // (1 = everyone comes from a different game). Used by Open Level
             // to stop 3 of the same 4 being re-matched with one person swapped.
@@ -3626,7 +3669,7 @@ renderCourts();
       //   5. just played together — fewest players coming from the same
       //      previous game (1 = all 4 from different games)
       //   6. waiting group — all 4 within the first OL_WAIT_BAND in line
-      //   7. foursome repeat  8. freshness  9. exact wait  10. exact level balance
+      //   7. foursome repeat (OP modes only)  8. freshness  9. exact wait  10. exact level balance
       // The front-player rule guarantees the longest-waiting player gets on;
       // the waiting-group rule stops players who just came off a court from
       // jumping ahead of people still waiting; within that group the other
@@ -3641,7 +3684,17 @@ renderCourts();
       // court this round plus one more court's worth. OP modes keep 8.
       const waitBand = mode === 'Open Level' ? OL_WAIT_PER_COURT * (Math.max(1, courts.filter(c => c.enabled).length) + 1) : OL_WAIT_BAND;
       const waitTier = c => Math.floor(c.waitScore / waitBand);
-      const compare = (x, y) => y.genderOk - x.genderOk || x.wantedGender - y.wantedGender || x.levelBand - y.levelBand || (x.carry - y.carry) || waitTier(x) - waitTier(y) || x.groupRepeat - y.groupRepeat || (x.fresh - y.fresh) || (x.waitScore - y.waitScore) || x.levelBal - y.levelBal;
+      // Open Level skips the foursome-repeat rule: in simulation it never changed
+      // a single pick, because "just played together" and freshness already
+      // rule those matches out. OP Multi Group / OP Meet keep it.
+      const groupRule = mode === 'Open Level' ? () => 0 : (x, y) => x.groupRepeat - y.groupRepeat;
+      // Stricter Level (Open Level only): ranked just below the waiting group,
+      // so it only separates levels among players already near the front.
+      const spreadRule = mode === 'Open Level' && strictLevel ? (x, y) => x.spreadBad - y.spreadBad : () => 0;
+      // Avoid 3W+1M (Open Level only): same position — only rearranges players
+      // already in the waiting group. If no other option exists, 3W+1M still plays.
+      const threeWRule = mode === 'Open Level' && avoid3W1M ? (x, y) => x.threeW - y.threeW : () => 0;
+      const compare = (x, y) => y.genderOk - x.genderOk || x.wantedGender - y.wantedGender || x.levelBand - y.levelBand || (x.carry - y.carry) || waitTier(x) - waitTier(y) || threeWRule(x, y) || spreadRule(x, y) || groupRule(x, y) || (x.fresh - y.fresh) || (x.waitScore - y.waitScore) || x.levelBal - y.levelBal;
       {
         // Front-player rule: the longest-waiting player who CAN play is
         // always in the match. Try the player at the front first; only if
@@ -3842,7 +3895,7 @@ renderCourts();
   // affects it changes (waitlist, game history, requested games, mode or
   // settings) — not on every unrelated re-render like toggling a court.
   // Declared here (after findMatch) because useMemo runs it immediately.
-  const upNextMatches = useMemo(computeUpNext, [showUpNext, matchMode, queue, requestedGames, history, forceMixedEnabled, prioritizeFreshness]);
+  const upNextMatches = useMemo(computeUpNext, [showUpNext, matchMode, queue, requestedGames, history, forceMixedEnabled, prioritizeFreshness, strictLevel, avoid3W1M]);
   // Listen for preview window signalling it's ready, then push current state
   useEffect(() => {
     const handler = e => {
@@ -5730,7 +5783,55 @@ renderCourts();
       transition: 'left 0.15s',
       boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
     }
-  })), "Manual")), /*#__PURE__*/React.createElement("div", {
+  })), "Manual")), matchMode === 'Open Level' && /*#__PURE__*/React.createElement("div", {
+    className: "ctrl-group"
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      cursor: 'pointer',
+      fontSize: 11,
+      fontWeight: 600,
+      color: strictLevel ? 'var(--orange)' : 'var(--text-muted)',
+      whiteSpace: 'nowrap'
+    },
+    title: strictLevel ? "On: prefers matches where all 4 players are within one level of each other (e.g. keeps Beginners and Intermediates apart), among the players near the front of the line. Average wait is unchanged, but a player with a less common level may occasionally wait one extra round." : "Off: levels are balanced by team average only, so a Beginner and an Intermediate can share a court. Waits are most even this way."
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: strictLevel,
+    onChange: e => toggleStrictLevel(e.target.checked),
+    style: {
+      accentColor: 'var(--orange)',
+      width: 13,
+      height: 13,
+      cursor: 'pointer'
+    }
+  }), "🎚 Stricter Level")), matchMode === 'Open Level' && /*#__PURE__*/React.createElement("div", {
+    className: "ctrl-group"
+  }, /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      cursor: 'pointer',
+      fontSize: 11,
+      fontWeight: 600,
+      color: avoid3W1M ? 'var(--orange)' : 'var(--text-muted)',
+      whiteSpace: 'nowrap'
+    },
+    title: avoid3W1M ? "On: avoids games with 3 women + 1 man by choosing mixed or women's doubles from the players near the front of the line. If there's no other option, the game still goes ahead. Men never wait longer; a woman may occasionally wait one extra round." : "Off: 3 women + 1 man games are allowed whenever they come up."
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: avoid3W1M,
+    onChange: e => toggleAvoid3W1M(e.target.checked),
+    style: {
+      accentColor: 'var(--orange)',
+      width: 13,
+      height: 13,
+      cursor: 'pointer'
+    }
+  }), "⚖ Avoid 3W+1M")), (matchMode === 'Same Level' || matchMode === 'Skill Based') && /*#__PURE__*/React.createElement("div", {
     className: "ctrl-group"
   }, /*#__PURE__*/React.createElement("label", {
     style: {
@@ -5743,7 +5844,7 @@ renderCourts();
       color: prioritizeFreshness ? 'var(--orange)' : 'var(--text-muted)',
       whiteSpace: 'nowrap'
     },
-    title: prioritizeFreshness ? "Freshness (new partner/opponent combos) is checked BEFORE wait time. Someone who's waited longest may occasionally be skipped in favor of a fresher match. (Only used in Same Level and Skill Based — Open Level, OP Multi Group and OP Meet always seat the front player and then pick the freshest match.)" : "Wait time is protected first — freshness only breaks ties between otherwise-equal matches. (Only used in Same Level and Skill Based — Open Level, OP Multi Group and OP Meet always seat the front player and then pick the freshest match.)"
+    title: prioritizeFreshness ? "Freshness (new partner/opponent combos) is checked BEFORE wait time. Someone who's waited longest may occasionally be skipped in favor of a fresher match." : "Wait time is protected first — freshness only breaks ties between otherwise-equal matches."
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
     checked: prioritizeFreshness,
