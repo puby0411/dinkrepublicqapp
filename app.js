@@ -1827,7 +1827,9 @@ function App() {
   // Open Level: when on (default), the algorithm forces a mixed-doubles round
   // after 2 consecutive same-gender rounds. When off, it never forces mixed —
   // gender composition is left entirely to whatever combo scores best.
-  const [forceMixedEnabled, setForceMixedEnabled] = useState(true);
+  // The Forced Mixed Rotation toggle was removed. OP Multi Group / OP Meet
+  // keep the rotation on (the previous default); Open Level doesn't use it.
+  const forceMixedEnabled = true;
   // When true, pairing/opponent freshness is checked BEFORE wait-time priority
   // in match selection (all modes). Default false preserves original behavior
   // where wait time is protected first and freshness only breaks ties.
@@ -3400,10 +3402,12 @@ renderCourts();
   // "balanced" (ties), so repeats and wait time decide between them.
   // 0 = strict balance, 0.5 = default, 1.0 = favour fresh pairings more.
   const OL_LEVEL_TOLERANCE = 0.5;
-  // Open Level: size of the "waiting group" at the front of the line. The
-  // 3 players joining the front player are chosen for freshness from within
-  // this group first (8 ≈ two courts' worth of players).
+  // Size of the "waiting group" at the front of the line: the 3 players
+  // joining the front player are chosen for freshness from within this group
+  // first. OP Multi Group / OP Meet use a fixed 8.
   const OL_WAIT_BAND = 8;
+  // Open Level: waiting group size per court in use (group = this × (courts + 1)).
+  const OL_WAIT_PER_COURT = 4;
   const openLevelWindowSize = n => Math.max(4, Math.min(n, OL_MAX_WINDOW));
   const findMatch = (q, mode, forceMixed = false, priorityIds = null) => {
     if (mode === 'Manual') return null;
@@ -3574,9 +3578,12 @@ renderCourts();
           // Open Level: gender is neutral on normal turns — mixed is only
           // preferred when the rotation is due. Other modes keep the old
           // behaviour (prefer non-mixed on normal turns).
-          // Gender is neutral on normal turns — mixed is only preferred when
-          // the rotation is due (Open Level, OP Multi Group, OP Meet).
-          const wantedGender = forceMixed ? isMixed ? 0 : 1 : 0;
+          // OP Multi Group / OP Meet: gender is neutral on normal turns and
+          // mixed is preferred when the rotation is due. Open Level has no
+          // mixed rotation at all (it made women play far more games than
+          // men and pulled players from deep in the line) — mixed happens
+          // only when it comes up naturally; rule 1 still splits 2 women.
+          const wantedGender = mode !== 'Open Level' && forceMixed ? isMixed ? 0 : 1 : 0;
           const type = isMixed ? 'mixed' : fc === 4 ? 'womens' : fc === 0 ? 'mens' : 'uneven';
           candidates.push({
             teamA: tA,
@@ -3615,7 +3622,7 @@ renderCourts();
       // team rules of OP Multi Group and OP Meet are hard rules applied in
       // bestSplitForCombo above, before any ranking):
       //   1. gender OK  2. front player (handled by the anchor loop below)
-      //   3. mixed when rotation is due  4. level balanced within tolerance
+      //   3. mixed when rotation is due (OP modes only)  4. level balanced within tolerance
       //   5. just played together — fewest players coming from the same
       //      previous game (1 = all 4 from different games)
       //   6. waiting group — all 4 within the first OL_WAIT_BAND in line
@@ -3630,7 +3637,10 @@ renderCourts();
       // the group whose court is being filled (Auto Assign passes only that
       // group's waitlist); in OP Meet it's the longest-waiting player whose
       // team can currently form a valid match.
-      const waitTier = c => Math.floor(c.waitScore / OL_WAIT_BAND);
+      // Open Level: the waiting group is 4 × (courts on + 1) — everyone due on
+      // court this round plus one more court's worth. OP modes keep 8.
+      const waitBand = mode === 'Open Level' ? OL_WAIT_PER_COURT * (Math.max(1, courts.filter(c => c.enabled).length) + 1) : OL_WAIT_BAND;
+      const waitTier = c => Math.floor(c.waitScore / waitBand);
       const compare = (x, y) => y.genderOk - x.genderOk || x.wantedGender - y.wantedGender || x.levelBand - y.levelBand || (x.carry - y.carry) || waitTier(x) - waitTier(y) || x.groupRepeat - y.groupRepeat || (x.fresh - y.fresh) || (x.waitScore - y.waitScore) || x.levelBal - y.levelBal;
       {
         // Front-player rule: the longest-waiting player who CAN play is
@@ -5720,31 +5730,7 @@ renderCourts();
       transition: 'left 0.15s',
       boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
     }
-  })), "Manual")), (matchMode === 'Open Level' || matchMode === 'OP Multi Group' || matchMode === 'OP Meet') && /*#__PURE__*/React.createElement("div", {
-    className: "ctrl-group"
-  }, /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5,
-      cursor: 'pointer',
-      fontSize: 11,
-      fontWeight: 600,
-      color: forceMixedEnabled ? 'var(--text-muted)' : 'var(--orange)',
-      whiteSpace: 'nowrap'
-    },
-    title: forceMixedEnabled ? "Forces a mixed-doubles round after 2 same-gender rounds in a row. Uncheck to never force mixed." : "Gender rotation is off — mixed rounds will only happen if they naturally score best."
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "checkbox",
-    checked: forceMixedEnabled,
-    onChange: e => setForceMixedEnabled(e.target.checked),
-    style: {
-      accentColor: 'var(--orange)',
-      width: 13,
-      height: 13,
-      cursor: 'pointer'
-    }
-  }), forceMixedEnabled ? "🔀 Forced Mixed Rotation" : "🔀 Mixed Rotation Off")), /*#__PURE__*/React.createElement("div", {
+  })), "Manual")), /*#__PURE__*/React.createElement("div", {
     className: "ctrl-group"
   }, /*#__PURE__*/React.createElement("label", {
     style: {
