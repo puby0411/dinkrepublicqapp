@@ -4383,6 +4383,19 @@ renderCourts();
     const matchTypeM = matchMode === 'Open Level' ? 'Open Levels' : matchMode === 'OP Multi Group' ? 'Multi Group' : matchMode === 'OP Meet' ? 'Team Meet' : fCntM === 2 ? 'Mixed Doubles' : fCntM === 4 ? "Women's Doubles" : "Men's Doubles";
     showNotif(`Court ${manualCourt} — ${matchTypeM} set. Press Start Game when players are ready.`);
   };
+  // Put players back into the waitlist at their ORIGINAL place in line:
+  // each goes just before the first waiting player who joined (or rejoined)
+  // after them, judged by their kept wait time (queuedAt).
+  const insertByWait = (list, players) => {
+    let out = [...list];
+    [...players].sort((a, b) => (a.queuedAt || 0) - (b.queuedAt || 0)).forEach(p => {
+      const t = p.queuedAt || 0;
+      const idx = out.findIndex(q => (q.queuedAt || 0) > t);
+      if (idx === -1) out.push(p);
+      else out.splice(idx, 0, p);
+    });
+    return out;
+  };
   // ── Set Game → Start Game ─────────────────────────────────────────
   const startStagedGame = courtId => {
     const court = courts.find(c => c.id === courtId);
@@ -4395,8 +4408,8 @@ renderCourts();
     } : c));
     showNotif(`Court ${courtId} — game started!`);
   };
-  // Cancel a set (not started) game: the 4 players go back to the FRONT of
-  // the waitlist with their original wait times, and a requested game that
+  // Cancel a set (not started) game: the 4 players go back to their original
+  // places in the waitlist (by their kept wait times), and a requested game that
   // was used is put back in the Requested list.
   const cancelStagedGame = courtId => {
     const court = courts.find(c => c.id === courtId);
@@ -4409,10 +4422,10 @@ renderCourts();
       staged: false,
       stagedReq: null
     } : c));
-    setQueue(prev => [...back, ...prev.filter(p => !back.some(b => b.id === p.id))]);
+    setQueue(prev => insertByWait(prev.filter(p => !back.some(b => b.id === p.id)), back));
     if (court.stagedReq) setRequestedGames(prev => prev.some(r => r.id === court.stagedReq.id) ? prev : [...prev, court.stagedReq]);
     roundsFiredRef.current = Math.max(0, roundsFiredRef.current - 1);
-    showNotif(`Court ${courtId} — set game cancelled, players returned to the front of the waitlist`);
+    showNotif(`Court ${courtId} — set game cancelled, players returned to their places in the waitlist`);
   };
   const endGame = courtId => {
     if (courts.find(c => c.id === courtId)?.staged) {
@@ -4693,19 +4706,19 @@ renderCourts();
         }
       };
     }));
-    // Remove replacement from queue; put removed player at front so they're next up.
-    // They always keep their original wait time (whether or not the game had started).
+    // Remove replacement from queue; the removed player goes back to their
+    // ORIGINAL place in line (by their kept wait time), not the front.
     setQueue(prev => {
       const withoutIn = prev.filter(p => p.id !== inPlayer.id);
       const requeuedOut = outPlayer ? { ...outPlayer, queuedAt: outPlayer.queuedAt ?? Date.now() } : null;
-      return requeuedOut ? [requeuedOut, ...withoutIn] : withoutIn;
+      return requeuedOut ? insertByWait(withoutIn, [requeuedOut]) : withoutIn;
     });
     setReplacingPlayer(null);
     showNotif(`${inPlayer.name} subbed in for ${outPlayer?.name || 'player'}!`);
   };
 
   // Auto-remove a player from an active court and fill the slot using
-  // the same pairing-score algorithm. The removed player goes front of queue.
+  // the same pairing-score algorithm. The removed player goes back to their original place in line.
   const autoRemoveAndReplace = (courtId, outPlayerId) => {
     const court = courts.find(c => c.id === courtId);
     if (!court?.players) return;
@@ -4767,7 +4780,7 @@ renderCourts();
       const withoutIn = prev.filter(p => p.id !== bestCandidate.id);
       // The removed player always keeps their original wait time.
       const requeuedOut = outPlayer ? { ...outPlayer, queuedAt: outPlayer.queuedAt ?? Date.now() } : null;
-      return requeuedOut ? [requeuedOut, ...withoutIn] : withoutIn;
+      return requeuedOut ? insertByWait(withoutIn, [requeuedOut]) : withoutIn;
     });
     setReplacingPlayer(null);
     const msg = 'Auto-filled: ' + bestCandidate.name + ' in for ' + outPlayer.name + '!';
@@ -6502,7 +6515,7 @@ renderCourts();
     }
   }, "▶ Start Game"), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-ghost btn-sm",
-    title: "Cancel this set game — the 4 players go back to the front of the waitlist with their wait times kept",
+    title: "Cancel this set game — the 4 players go back to their original places in the waitlist, with their wait times kept",
     onClick: () => {
       setRearrangeCourt(null);
       setReplacingPlayer(null);
