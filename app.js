@@ -1913,6 +1913,22 @@ function App() {
   };
   const [notification, setNotification] = useState(null);
   const [activeTab, setActiveTab] = useState('courts');
+  // Show/hide the top section (title, session bar, stats, controls).
+  // Remembered on this computer.
+  const [topCollapsed, setTopCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('dr_top_collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleTop = () => setTopCollapsed(v => {
+    const nv = !v;
+    try {
+      localStorage.setItem('dr_top_collapsed', nv ? '1' : '0');
+    } catch {}
+    return nv;
+  });
   useEffect(() => {
     if (matchMode === 'Team Based' && ['queue', 'playerlist', 'requests'].includes(activeTab)) {
       setActiveTab('courts');
@@ -2091,7 +2107,12 @@ function App() {
   // On mount, if history was restored from the autosaved live state, rebuild
   // the pairing-history/games-played/join-round tracking refs from it so
   // matchmaking freshness scoring stays accurate after a page refresh.
-  useEffect(() => {
+  // Done synchronously during the FIRST render (not in an effect) so the
+  // 🔁 / ⚔️ / ×N badges are correct immediately after a refresh — refs
+  // changing inside an effect don't trigger a re-render.
+  const rebuiltOnLoadRef = useRef(false);
+  if (!rebuiltOnLoadRef.current) {
+    rebuiltOnLoadRef.current = true;
     if (history && history.length) {
       partnerHistory.current = {};
     lastGameRef.current = {};
@@ -2110,8 +2131,7 @@ function App() {
         roundsFiredRef.current = idx + 1;
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
 
   // Score a candidate match: sum of all pairings among the 4 players.
   // Lower = fresher. Partner pairs weighted 2× to more strongly avoid
@@ -5223,6 +5243,110 @@ renderCourts();
       } catch (e) {}
     }
   }, [history, statsGroupFilter, statsTeamFilter]);
+  // ── "Next in Waitlist" panel (Courts tab) ──────────────────────────
+  // The first 10 waiting players, shown under the court cards so staff
+  // don't have to switch to the Waitlist tab.
+  const renderNextInWaitlist = () => {
+    const NEXT_N = 10;
+    const next = queue.slice(0, NEXT_N);
+    const groupName = id => playGroups.find(g => g.id === id)?.name;
+    const teamName = id => teams.find(t => t.id === id)?.name;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "card",
+      style: {
+        marginTop: 14,
+        padding: 12,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--r)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        color: 'var(--text-muted)'
+      }
+    }, "⏳ Next in Waitlist"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 11,
+        color: 'var(--text-dim)'
+      }
+    }, queue.length > NEXT_N ? `showing ${NEXT_N} of ${queue.length}` : `${queue.length} waiting`), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-ghost btn-sm",
+      style: {
+        marginLeft: 'auto'
+      },
+      onClick: () => setActiveTab('queue')
+    }, "Full waitlist →")), next.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: 'var(--text-dim)',
+        textAlign: 'center',
+        padding: 8
+      }
+    }, "Waitlist is empty") : /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+        gap: 6
+      }
+    }, next.map((p, i) => {
+      const partner = p.partnerId ? queue.find(x => x.id === p.partnerId) || null : null;
+      const games = playerStats[p.id]?.games || 0;
+      const tag = matchMode === 'OP Multi Group' ? groupName(p.group) : matchMode === 'OP Meet' ? teamName(p.team) : null;
+      return /*#__PURE__*/React.createElement("div", {
+        key: p.id,
+        className: "queue-item",
+        style: {
+          flexWrap: 'nowrap',
+          minWidth: 0,
+          padding: '6px 8px'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "queue-num"
+      }, "#", i + 1), /*#__PURE__*/React.createElement(GenderTag, {
+        gender: p.gender
+      }), /*#__PURE__*/React.createElement(LevelBadge, {
+        level: p.level
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "queue-name",
+        style: {
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        },
+        title: p.name + (partner ? ` (fixed pair with ${partner.name})` : '')
+      }, p.name, partner ? ' 🔗' : ''), tag && /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 10,
+          fontWeight: 700,
+          color: 'var(--teal)',
+          whiteSpace: 'nowrap'
+        }
+      }, tag), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 10,
+          color: 'var(--text-muted)',
+          marginLeft: 'auto',
+          whiteSpace: 'nowrap'
+        },
+        title: "Games played this session"
+      }, "🎮 ", games, "g"), /*#__PURE__*/React.createElement(WaitTimer, {
+        key: "nw-" + p.id,
+        since: p.queuedAt || sessionStartedMs
+      }));
+    })));
+  };
   if (!authUser) {
     return /*#__PURE__*/React.createElement(PinLoginScreen, {
       onLogin: login,
@@ -5233,9 +5357,9 @@ renderCourts();
     className: "app"
   }, notification && /*#__PURE__*/React.createElement("div", {
     className: "notification"
-  }, "✓ ", notification), /*#__PURE__*/React.createElement("div", {
+  }, "✓ ", notification), !topCollapsed && /*#__PURE__*/React.createElement("div", {
     className: "header"
-  }, /*#__PURE__*/React.createElement("h1", null, "🏓 DINK Republic Open Play"), /*#__PURE__*/React.createElement("p", null, "Court Manager · Doubles Open Play System")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("h1", null, "🏓 DINK Republic Open Play"), /*#__PURE__*/React.createElement("p", null, "Court Manager · Doubles Open Play System")), !topCollapsed && /*#__PURE__*/React.createElement("div", {
     className: "session-bar"
   }, /*#__PURE__*/React.createElement("div", {
     className: "session-info"
@@ -5414,7 +5538,7 @@ renderCourts();
       height: 13,
       cursor: 'pointer'
     }
-  }), "👁 Up Next"))), /*#__PURE__*/React.createElement("div", {
+  }), "👁 Up Next"))), !topCollapsed && /*#__PURE__*/React.createElement("div", {
     className: "stat-grid"
   }, /*#__PURE__*/React.createElement("div", {
     className: "stat-card"
@@ -5452,7 +5576,7 @@ renderCourts();
     }
   }, history.length), /*#__PURE__*/React.createElement("div", {
     className: "lbl"
-  }, "Games Done"))), /*#__PURE__*/React.createElement("div", {
+  }, "Games Done"))), !topCollapsed && /*#__PURE__*/React.createElement("div", {
     className: "controls-bar"
   }, /*#__PURE__*/React.createElement("div", {
     className: "ctrl-group"
@@ -5627,7 +5751,63 @@ renderCourts();
       setSimModal(true);
     },
     title: "Run automated game simulation"
-  }, "🧪 Test Sim")), /*#__PURE__*/React.createElement("div", {
+  }, "🧪 Test Sim")), topCollapsed ? /*#__PURE__*/React.createElement("div", {
+    // Collapsed: one slim bar with the session name and key numbers
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 14,
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--r)',
+      padding: '8px 14px',
+      marginBottom: 12,
+      fontSize: 13
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 800,
+      color: 'var(--green)'
+    }
+  }, "🏓 ", sessionName), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: 'var(--gold)'
+    }
+  }, queue.length), " in queue"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: 'var(--green)'
+    }
+  }, onCourtCount), " on court"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: 'var(--blue)'
+    }
+  }, openCourts), " open courts"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: 'var(--teal)'
+    }
+  }, history.length), " games done"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: 'var(--text-muted)'
+    }
+  }, matchMode), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    style: {
+      marginLeft: 'auto'
+    },
+    onClick: toggleTop,
+    title: "Show the title, session bar, stats and controls"
+  }, "▼ Show controls")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      margin: '-4px 0 6px'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: toggleTop,
+    title: "Hide the title, session bar, stats and controls to make room for the courts"
+  }, "▲ Hide controls")), /*#__PURE__*/React.createElement("div", {
     className: "tabbar"
   }, [['courts', `Courts (${numCourts})`], ...(matchMode === 'Team Based' ? [['teamroster', `Teams (${teamRoster.length})`]] : [['queue', `Waitlist (${queue.length})`], ['playerlist', `Player List (${playerList.length})`], ['requests', `Requested (${requestedGames.length})`]]), ['history', `History (${history.length})`], ['stats', 'Player Stats'], ...(matchMode === 'OP Multi Group' ? [['grouplist', `Group List (${playGroups.length})`]] : []), ...(matchMode === 'OP Meet' ? [['teamlist', `Team List (${teams.length})`]] : []), ...(authUser.role === 'Superadmin' ? [['users', `Users (${users.length})`]] : [])].map(([key, label]) => /*#__PURE__*/React.createElement("div", {
     key: key,
@@ -5858,9 +6038,21 @@ renderCourts();
       gender: p.gender
     }), /*#__PURE__*/React.createElement(LevelBadge, {
       level: p.level
-    }), /*#__PURE__*/React.createElement("span", {
+    }), /*#__PURE__*/React.createElement("div", {
+      // Name + 🔗 + ⚔️ badges: badges wrap onto a second line when the card
+      // is narrow, so the player's name is never cut off.
+      style: {
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 4
+      }
+    }, /*#__PURE__*/React.createElement("span", {
       className: "player-name",
       style: {
+        flex: '0 1 auto',
         color: isBeingReplaced ? 'var(--red)' : undefined
       }
     }, p.name), p.partnerId && section.players.find(x => x.id === p.partnerId) && /*#__PURE__*/React.createElement("span", {
@@ -5868,7 +6060,7 @@ renderCourts();
         fontSize: 9,
         color: '#ce93d8'
       }
-    }, "🔗"), section.team === 'A' && opponentBadges(p, court.players.teamB), isRearranging && /*#__PURE__*/React.createElement("span", {
+    }, "🔗"), section.team === 'A' && opponentBadges(p, court.players.teamB)), isRearranging && /*#__PURE__*/React.createElement("span", {
       style: {
         marginLeft: 'auto',
         fontSize: 12,
@@ -6388,7 +6580,7 @@ renderCourts();
       },
       onClick: () => autoAssign(court.id)
     }, "▶ Start Match"))))));
-  })(), showUpNext && activeTab === 'courts' && queue.length >= 4 && matchMode !== 'Manual' && (() => {
+  })(), activeTab === 'courts' && matchMode !== 'Team Based' && renderNextInWaitlist(), showUpNext && activeTab === 'courts' && queue.length >= 4 && matchMode !== 'Manual' && (() => {
     // Same logic as the pop-out preview window (computeUpNext) so both
     // always show the same upcoming matches.
     const previewMatches = upNextMatches;
