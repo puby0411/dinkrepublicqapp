@@ -3241,7 +3241,10 @@ renderCourts();
     setCourts(prev => prev.map(c => ({
       ...c,
       players: null,
-      startTime: null
+      startTime: null,
+      staged: false,
+      stagedReq: null,
+      rrMatchId: null
     })));
     setManualCourt(null);
     setManualSelected([]);
@@ -3263,6 +3266,63 @@ renderCourts();
     setLastSaved(null);
     showNotif(`New session "${n}" started!`);
     setSessionModal(null);
+    setActiveTab('courts');
+  };
+  // ── Reset Games ─────────────────────────────────────────────────────
+  // Clears games on courts, history, player stats, requested games and all
+  // pairing/fairness counts, and resets every wait time to now. Keeps the
+  // Player List and the waitlist (players on court go back to the waitlist).
+  const resetGames = () => {
+    const onCourt = courts.filter(c => c.players).length;
+    const msg = `Reset games?\n\nThis will:\n• clear ${onCourt ? onCourt + ' game' + (onCourt === 1 ? '' : 's') + ' on court (players go back to the waitlist)' : 'all courts'}\n• clear History (${history.length} game${history.length === 1 ? '' : 's'}) and Player Stats\n• clear Requested games\n• reset everyone's wait time to now\n\nThe Player List and waitlist are kept. Saved sessions are not affected.`;
+    if (!window.confirm(msg)) return;
+    const now = Date.now();
+    if (matchMode === 'Team Based') {
+      // Teams on court go back to the end of the team queue (Open Play)
+      const courtTeams = courts.filter(c => c.players).flatMap(c => [...c.players.teamA, ...c.players.teamB]);
+      setTeamQueue(prev => {
+        const kept = prev.map(t => ({ ...t, queuedAt: now }));
+        const back = courtTeams.filter(t => t && !kept.some(k => k.id === t.id)).map(t => ({ ...t, queuedAt: now }));
+        return teamSubMode === 'Open Play' ? [...kept, ...back] : kept;
+      });
+      setRrSchedule(prev => prev.map(m => ({ ...m, status: 'pending', winner: null })));
+    } else {
+      const courtPlayers = courts.filter(c => c.players).flatMap(c => [...c.players.teamA, ...c.players.teamB]);
+      setQueue(prev => {
+        const kept = prev.map(p => ({ ...p, queuedAt: now }));
+        const back = courtPlayers.filter(p => p && !kept.some(k => k.id === p.id)).map(p => ({ ...p, queuedAt: now }));
+        return [...kept, ...back];
+      });
+    }
+    setCourts(prev => prev.map(c => ({
+      ...c,
+      players: null,
+      startTime: null,
+      staged: false,
+      stagedReq: null,
+      rrMatchId: null
+    })));
+    setHistory([]);
+    setRequestedGames([]);
+    setManualCourt(null);
+    setManualSelected([]);
+    setScoreModal(null);
+    setTeamScoreModal(null);
+    setReplacingPlayer(null);
+    setRearrangeCourt(null);
+    setCrossCourtSwap(null);
+    assignCount.current = 0;
+    sbMixedCount.current = 0;
+    partnerHistory.current = {};
+    opponentHistory.current = {};
+    groupHistory.current = {};
+    lastGameRef.current = {};
+    gameSeqRef.current = 0;
+    gamesPlayedRef.current = {};
+    joinRoundRef.current = {};
+    roundsFiredRef.current = 0;
+    olSameGenderStreak.current = 0;
+    showNotif('Games reset — history and stats cleared, wait times restarted');
     setActiveTab('courts');
   };
   const deleteSession = (name, e) => {
@@ -5504,6 +5564,15 @@ renderCourts();
     },
     title: "Start a fresh session"
   }, "＋ New Session"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-sm",
+    onClick: resetGames,
+    title: "Clear games on court, History, Player Stats and Requested games, and restart everyone's wait time. Keeps the Player List and waitlist.",
+    style: {
+      background: 'var(--red-dim)',
+      color: 'var(--red)',
+      border: '1px solid var(--red)'
+    }
+  }, "🧹 Reset Games"), /*#__PURE__*/React.createElement("button", {
     className: "btn btn-sm",
     onClick: openPreviewWindow,
     title: "Open TV/display preview in a new window",
