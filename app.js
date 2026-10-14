@@ -2388,11 +2388,13 @@ function App() {
     --border: #1e3a6a; --text-muted: #6a8cb4;
     --text-main: #e8f0fe;
   }
+  html, body { height: 100%; }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: #060f20;
     color: var(--text-main);
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden; /* the TV view never scrolls — cards shrink to fit instead */
     display: flex;
     flex-direction: column;
   }
@@ -2414,13 +2416,13 @@ function App() {
   #clock { display: flex; flex-direction: column; align-items: center; line-height: 1; }
   #clock-time {
     font-family: 'Consolas', 'SF Mono', 'Menlo', 'Courier New', monospace;
-    font-size: clamp(44px, 5vw, 110px); font-weight: 800; color: var(--gold); letter-spacing: 0.04em;
+    font-size: clamp(36px, min(5vw, 8.5vh), 110px); font-weight: 800; color: var(--gold); letter-spacing: 0.04em;
     font-variant-numeric: tabular-nums; white-space: nowrap;
     text-shadow: 0 0 18px rgba(255, 214, 0, 0.35);
   }
   #clock-time .colon { animation: clock-blink 1s steps(1) infinite; }
   #clock-time .ampm { font-size: 0.3em; margin-left: 0.25em; letter-spacing: 1px; vertical-align: 0.9em; }
-  #clock-date { margin-top: 0.35em; font-size: clamp(14px, 1.25vw, 26px); font-weight: 800; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
+  #clock-date { margin-top: 0.35em; font-size: clamp(12px, min(1.25vw, 2.2vh), 26px); font-weight: 800; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
   .header-spacer { min-width: 0; }
   @keyframes clock-blink { 50% { opacity: 0.25; } }
   body.light-theme #clock-time { text-shadow: none; }
@@ -2435,12 +2437,17 @@ function App() {
     min-width: 0;
     display: grid;
     grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
-    grid-auto-rows: minmax(min-content, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
     gap: 18px;
     align-content: stretch;
-    overflow-y: auto;
+    overflow: hidden;
   }
-  #upnext-col { --s: 1; width: clamp(280px, 22vw, 440px); flex-shrink: 0; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+  #courts-grid .court-card { min-height: 0; overflow: hidden; }
+  #upnext-col { --s: 1; width: clamp(260px, 22vw, 440px); flex-shrink: 0; display: flex; flex-direction: column; gap: 18px; overflow: hidden; min-height: 0; }
+  #upnext-col .court-card { min-height: 0; }
+  #upnext-col .court-header { gap: 6px; }
+  #upnext-col .court-num { font-size: calc(18px * var(--s)); }
+  #upnext-col .court-header > span:last-child { text-align: right; flex-shrink: 1; min-width: 0; }
   #upnext-col:empty { display: none; }
   .court-card {
     background: var(--surface);
@@ -2795,7 +2802,7 @@ function buildPlayerRowPreview(p) {
     ? '<span style="font-size:11px;font-weight:800;color:#f06292;background:#2a0818;border:1px solid #e91e6344;border-radius:20px;padding:1px 6px;flex-shrink:0;">♀</span>'
     : '<span style="font-size:11px;font-weight:800;color:#64b5f6;background:#0d2040;border:1px solid #2196f344;border-radius:20px;padding:1px 6px;flex-shrink:0;">♂</span>';
   const lvlBadge = '<span class="badge ' + (LEVEL_BADGE[p.level]||'badge-beg') + '">' + (LEVEL_S[p.level]||p.level) + '</span>';
-  return '<div class="player-row" style="opacity:0.9;">' + genderTag + lvlBadge + '<span class="player-name-big" style="font-size:16px;">' + esc(p.name) + '</span></div>';
+  return '<div class="player-row" style="opacity:0.9;">' + genderTag + lvlBadge + '<span class="player-name-big" style="font-size:calc(16px * var(--s));">' + esc(p.name) + '</span></div>';
 }
 
 // Pick an even grid for the number of courts and scale text to fill it.
@@ -2809,11 +2816,24 @@ function layoutCourts() {
   const gap = 18;
   const cardW = (grid.clientWidth - gap * (cols - 1)) / cols;
   const cardH = (grid.clientHeight - gap * (rows - 1)) / rows;
-  // A court card at normal size is roughly 340 × 300 px. Grow up to 2×
-  // on big screens; shrink down to 0.7× on small ones so everything fits.
-  const sc = Math.max(0.7, Math.min(2, cardW / 340, cardH / 300));
+  // A court card at normal size is roughly 340 × 300 px. Start from that
+  // estimate (up to 2× on big screens), then shrink step by step until no
+  // card's content is cut off — so the screen never needs scrolling.
+  const overflows = el => [...el.children].some(c => c.scrollHeight > c.clientHeight + 1) || el.scrollHeight > el.clientHeight + 1;
+  let sc = Math.max(0.45, Math.min(2, cardW / 340, cardH / 300));
   grid.style.setProperty('--s', sc.toFixed(3));
-  document.getElementById('upnext-col').style.setProperty('--s', Math.min(1, sc).toFixed(3));
+  while (sc > 0.45 && overflows(grid)) {
+    sc -= 0.04;
+    grid.style.setProperty('--s', sc.toFixed(3));
+  }
+  // Up Next column: same idea, never larger than normal size.
+  const upCol = document.getElementById('upnext-col');
+  let su = Math.min(1, sc + 0.1);
+  upCol.style.setProperty('--s', su.toFixed(3));
+  while (su > 0.45 && upCol.scrollHeight > upCol.clientHeight + 1) {
+    su -= 0.04;
+    upCol.style.setProperty('--s', su.toFixed(3));
+  }
 }
 window.addEventListener('resize', layoutCourts);
 
