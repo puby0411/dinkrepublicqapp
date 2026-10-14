@@ -3634,6 +3634,14 @@ renderCourts();
       // This penalises combos that include someone who just joined or returned,
       // naturally surfacing groups where everyone has waited a long time.
       const worstQpos = players => worstQposIds(players.map(p => p.id));
+      // Games owed: how many games a player should have had for the time they've
+      // been here (games started since they joined × their share of court time)
+      // minus the games they've actually played. Keeps game counts even, e.g.
+      // when some games finish faster than others, without favouring late
+      // arrivals.
+      const onCourtCount = courts.reduce((t, c) => t + (c.players ? 4 : 0), 0);
+      const courtShare = Math.min(1, 4 / Math.max(4, sorted.length + onCourtCount));
+      const owedOf = p => Math.max(0, roundsFiredRef.current - (joinRoundRef.current[p.id] ?? 0)) * courtShare - (gamesPlayedRef.current[p.id] || 0);
       const bestSplitForCombo = players => {
         // OP Multi Group: all 4 players must be tagged to the SAME group.
         // Players without a group assigned can't be matched in this mode.
@@ -3690,6 +3698,8 @@ renderCourts();
             levelBand: levelBalance(tA, tB) <= OL_LEVEL_TOLERANCE + 1e-9 ? 0 : levelBalance(tA, tB),
             // 3 women + 1 man (ranked lower when Avoid 3W+1M is on)
             threeW: fc === 3 ? 1 : 0,
+            // Total games owed to these 4 players (see owedOf)
+            owed: players.reduce((t, p) => t + owedOf(p), 0),
             // 1 woman + 3 men (very soft preference when Stricter Gender is on)
             oneW: fc === 1 ? 1 : 0,
             // Soft gender order on balanced nights: men's / women's doubles,
@@ -3758,6 +3768,8 @@ renderCourts();
       const spreadRule = mode === 'Open Level' && strictLevel ? (x, y) => x.spreadBad - y.spreadBad : () => 0;
       // Avoid 3W+1M (Open Level only): same position — only rearranges players
       // already in the waiting group. If no other option exists, 3W+1M still plays.
+      // Open Level: prefer the group owed the most games (rounded to whole games)
+      const owedRule = mode === 'Open Level' ? (x, y) => Math.round(y.owed) - Math.round(x.owed) : () => 0;
       const threeWRule = mode === 'Open Level' && avoid3W1M ? (x, y) => x.threeW - y.threeW : () => 0;
       // Also with Stricter Gender: avoid 1 woman + 3 men, but only as a
       // tiebreak after freshness — it never causes extra repeats.
@@ -3768,7 +3780,7 @@ renderCourts();
       const womenShare = pool.length ? pool.filter(p => p.gender === 'F').length / pool.length : 0;
       const balancedGender = womenShare >= 0.4 && womenShare <= 0.6;
       const oneWRule = mode === 'Open Level' && avoid3W1M ? balancedGender ? (x, y) => x.gPref - y.gPref : (x, y) => x.oneW - y.oneW : () => 0;
-      const compare = (x, y) => y.genderOk - x.genderOk || x.wantedGender - y.wantedGender || x.levelBand - y.levelBand || (x.carry - y.carry) || waitTier(x) - waitTier(y) || threeWRule(x, y) || spreadRule(x, y) || groupRule(x, y) || (x.fresh - y.fresh) || oneWRule(x, y) || (x.waitScore - y.waitScore) || x.levelBal - y.levelBal;
+      const compare = (x, y) => y.genderOk - x.genderOk || x.wantedGender - y.wantedGender || x.levelBand - y.levelBand || (x.carry - y.carry) || waitTier(x) - waitTier(y) || owedRule(x, y) || threeWRule(x, y) || spreadRule(x, y) || groupRule(x, y) || (x.fresh - y.fresh) || oneWRule(x, y) || (x.waitScore - y.waitScore) || x.levelBal - y.levelBal;
       {
         // Front-player rule: the longest-waiting player who CAN play is
         // always in the match. Try the player at the front first; only if
