@@ -5444,7 +5444,21 @@ renderCourts();
       color: '#fff',
       border: 'none'
     }
-  }, "📺 Preview Screen"), /*#__PURE__*/React.createElement("label", {
+  }, "📺 Preview Screen"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-sm",
+    // Tournament Desk (tournament.html, same folder) opens in its own tab so
+    // this Open Play session — and its preview screen — keep running.
+    onClick: () => {
+      const w = window.open('tournament.html', 'dr_tournament');
+      if (w) w.focus();
+    },
+    title: "Open the Tournament Desk in a new tab",
+    style: {
+      background: '#c9a40a',
+      color: '#13231f',
+      border: 'none'
+    }
+  }, "🏆 Tournament"), /*#__PURE__*/React.createElement("label", {
     style: {
       display: 'flex',
       alignItems: 'center',
