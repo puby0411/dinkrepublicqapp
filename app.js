@@ -3692,6 +3692,9 @@ renderCourts();
             threeW: fc === 3 ? 1 : 0,
             // 1 woman + 3 men (very soft preference when Stricter Gender is on)
             oneW: fc === 1 ? 1 : 0,
+            // Soft gender order on balanced nights: men's / women's doubles,
+            // then mixed, then 1 woman + 3 men.
+            gPref: fc === 0 || fc === 4 ? 0 : fc === 2 ? 1 : 2,
             // Level spread of all 4 players (highest − lowest). 0 or 1 = fine;
             // 2+ (e.g. Beginner with Intermediate) is ranked lower when
             // Stricter Level is on.
@@ -3758,7 +3761,13 @@ renderCourts();
       const threeWRule = mode === 'Open Level' && avoid3W1M ? (x, y) => x.threeW - y.threeW : () => 0;
       // Also with Stricter Gender: avoid 1 woman + 3 men, but only as a
       // tiebreak after freshness — it never causes extra repeats.
-      const oneWRule = mode === 'Open Level' && avoid3W1M ? (x, y) => x.oneW - y.oneW : () => 0;
+      // On balanced nights (40–60% of the players considered are women) the
+      // soft preference is: same gender (men's or women's doubles) > mixed >
+      // 1W+3M. Otherwise only 1W+3M is softly avoided — preferring same-gender
+      // games when one gender is a minority made that gender wait longer.
+      const womenShare = pool.length ? pool.filter(p => p.gender === 'F').length / pool.length : 0;
+      const balancedGender = womenShare >= 0.4 && womenShare <= 0.6;
+      const oneWRule = mode === 'Open Level' && avoid3W1M ? balancedGender ? (x, y) => x.gPref - y.gPref : (x, y) => x.oneW - y.oneW : () => 0;
       const compare = (x, y) => y.genderOk - x.genderOk || x.wantedGender - y.wantedGender || x.levelBand - y.levelBand || (x.carry - y.carry) || waitTier(x) - waitTier(y) || threeWRule(x, y) || spreadRule(x, y) || groupRule(x, y) || (x.fresh - y.fresh) || oneWRule(x, y) || (x.waitScore - y.waitScore) || x.levelBal - y.levelBal;
       {
         // Front-player rule: the longest-waiting player who CAN play is
@@ -5894,7 +5903,7 @@ renderCourts();
       color: avoid3W1M ? 'var(--orange)' : 'var(--text-muted)',
       whiteSpace: 'nowrap'
     },
-    title: avoid3W1M ? "On: avoids games with 3 women + 1 man by choosing mixed or women's doubles from the players near the front of the line, and — as a softer preference — also avoids 1 woman + 3 men when it costs nothing else. If there's no other option, the game still goes ahead. Average wait is unchanged; a player may occasionally wait one extra round." : "Off: any mix of women and men is allowed whenever it comes up."
+    title: avoid3W1M ? "On: avoids games with 3 women + 1 man by choosing other games from the players near the front of the line. As softer preferences: when women and men are roughly balanced (40–60% women waiting), men's and women's doubles are preferred over mixed; also avoids 1 woman + 3 men when it costs nothing else. If there's no other option, the game still goes ahead. Average wait is unchanged; a player may occasionally wait one extra round." : "Off: any mix of women and men is allowed whenever it comes up."
   }, /*#__PURE__*/React.createElement("input", {
     type: "checkbox",
     checked: avoid3W1M,
