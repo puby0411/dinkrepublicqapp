@@ -263,6 +263,8 @@ a.btn{text-decoration:none;color:inherit}
 .ksel{width:100%;font-size:12px;padding:4px 6px}
 .field.off .seg{opacity:.45}.field.off .lbl{opacity:.6}
 .toggle input:disabled+*,.toggle:has(input:disabled){opacity:.5;cursor:not-allowed}
+.drawtag{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:3px;margin-left:auto;margin-right:6px}
+.swon.drw{background:var(--warn-soft);color:var(--warn)}
 .savebox{display:flex;align-items:center;gap:10px;min-height:34px}
 .sstat{font-size:12.5px;color:var(--muted);max-width:240px;line-height:1.3}
 .sstat.ok{color:var(--accent)}
@@ -626,9 +628,14 @@ function scoreOf(o,SET,N){if(!o)return null;
   if(SET){let wa=0,wb=0,pA=0,pB=0;for(const x of(Array.isArray(o.sets)?o.sets:[])){if(wa>=N||wb>=N)break;if(!setDone(x))break;pA+=x[0];pB+=x[1];if(x[0]>x[1])wa++;else wb++}
     return(wa>=N||wb>=N)?{sa:wa,sb:wb,pA,pB,set:true,aw:wa>wb}:null}
   return(o.a!=null&&o.b!=null&&o.a!==o.b)?{sa:o.a,sb:o.b,pA:o.a,pB:o.b,set:false,aw:o.a>o.b}:null}
+const DRAW_STAGES=new Set(['rr','pool','porr','sw']);
+const drawsOn=grp=>teamOn(grp)&&!!grp.opts.noDecider&&teamCats(grp).length%2===0;
 function teamResult(grp,m,r){const SET=setsOn(grp),N=SET?raceTo(grp):0,cats=teamCats(grp),c=(m.s&&m.s.cat)||{};let ga=0,gb=0,pA=0,pB=0,all=true;r.sub={};
   for(const k of cats){const x=scoreOf(c[k],SET,N);r.sub[k]=x;if(!x){all=false;continue}pA+=x.pA;pB+=x.pB;if(x.aw)ga++;else gb++}
   r.ga=ga;r.gb=gb;r.needD=all&&ga===gb;
+  /* Decider switched off (grp.opts.noDecider): a split in a round-robin style match is recorded as a draw.
+     Knockout, King/Queen and Ladder matches need a winner, so they still use the Decider. */
+  if(r.needD&&grp.opts.noDecider&&DRAW_STAGES.has(m.stage)){r.needD=false;r.done=true;r.draw=true;r.set=true;r.sa=ga;r.sb=gb;r.pA=pA;r.pB=pB;r.w=null;r.l=null;return}
   if(r.needD){const d=scoreOf(c.D,false,0);r.sub.D=d;if(d){pA+=d.pA;pB+=d.pB;if(d.aw)ga++;else gb++;r.ga=ga;r.gb=gb}else all=false}
   if(all&&ga!==gb){r.done=true;r.set=true;r.sa=ga;r.sb=gb;r.pA=pA;r.pB=pB;r.w=ga>gb?r.a:r.b;r.l=r.w===r.a?r.b:r.a}}
 /* The results of one category only, shaped like resolve() results, for the category ranking tabs */
@@ -646,13 +653,13 @@ function resolve(grp){const R={},SET=setsOn(grp),N=SET?raceTo(grp):0,TEAM=teamOn
       else if(m.s&&m.s.pa===a&&m.s.pb===b&&m.s.a!=null&&m.s.b!=null&&m.s.a!==m.s.b){r.done=true;r.sa=m.s.a;r.sb=m.s.b;r.pA=r.sa;r.pB=r.sb;r.w=m.s.a>m.s.b?a:b;r.l=r.w===a?b:a}}
     R[m.id]=r}
   return R}
-function standings(ids,ms,R,opt={}){const st={};ids.forEach(id=>st[id]={id,p:0,w:0,l:0,pf:0,pa:0,sw:0,sl:0,opp:[],kc:0,bye:0});
+function standings(ids,ms,R,opt={}){const st={};ids.forEach(id=>st[id]={id,p:0,w:0,l:0,d:0,pf:0,pa:0,sw:0,sl:0,opp:[],kc:0,bye:0});
   for(const m of ms){const r=R[m.id];if(!r.done)continue;
     if(r.bye){const x=r.w;if(opt.byeWin&&st[x]){st[x].w++;st[x].bye++}continue}
     const A=st[r.a],B=st[r.b];if(!A||!B)continue;A.p++;B.p++;A.pf+=r.pA;A.pa+=r.pB;B.pf+=r.pB;B.pa+=r.pA;if(r.set){A.sw+=r.sa;A.sl+=r.sb;B.sw+=r.sb;B.sl+=r.sa}A.opp.push(r.b);B.opp.push(r.a);
-    if(r.w===r.a){A.w++;B.l++}else{B.w++;A.l++}
+    if(r.draw){A.d++;B.d++}else if(r.w===r.a){A.w++;B.l++}else{B.w++;A.l++}
     if(opt.kc&&m.court===1)st[r.w].kc++}
-  const list=Object.values(st);list.forEach(s=>{s.diff=s.pf-s.pa;s.sd=s.sw-s.sl;s.pts=s.w+(opt.kc?s.kc:0)});
+  const list=Object.values(st);list.forEach(s=>{s.diff=s.pf-s.pa;s.sd=s.sw-s.sl;s.pts=s.w+s.d/2+(opt.kc?s.kc:0)});
   if(opt.buch)list.forEach(s=>s.buch=s.opp.reduce((t,o)=>t+st[o].w,0));
   if(opt.tb){const out=[];[...new Set(list.map(s=>s.pts))].sort((a,b)=>b-a).forEach(pts=>{
       const blk=list.filter(s=>s.pts===pts).sort((x,y)=>ids.indexOf(x.id)-ids.indexOf(y.id));out.push(...tbResolve(blk,ms,R,ids,!!opt.sets))});return out}
@@ -668,7 +675,7 @@ const TB_ORDER=['h2h','diff','pa'],TB_ORDER_SETS=['h2h','sd','diff','pa'],TB_LAB
 function tbResolve(blk,ms,R,ids,sets){if(blk.length<2)return blk;
   for(const c of (sets?TB_ORDER_SETS:TB_ORDER)){let key;
     if(c==='h2h'){const set=new Set(blk.map(s=>s.id)),mw={},ms2={},md={};blk.forEach(s=>{mw[s.id]=0;ms2[s.id]=0;md[s.id]=0});
-      for(const m of ms){const r=R[m.id];if(!r.done||r.bye||!set.has(r.a)||!set.has(r.b))continue;mw[r.w]++;
+      for(const m of ms){const r=R[m.id];if(!r.done||r.bye||!set.has(r.a)||!set.has(r.b))continue;if(!r.draw)mw[r.w]++;
         if(r.set){ms2[r.a]+=r.sa-r.sb;ms2[r.b]+=r.sb-r.sa}md[r.a]+=r.pA-r.pB;md[r.b]+=r.pB-r.pA}
       key=s=>sets?[mw[s.id],ms2[s.id],md[s.id]]:[mw[s.id],md[s.id]]}
     else if(c==='sd')key=s=>[s.sd];else if(c==='diff')key=s=>[s.diff];else key=s=>[-s.pa];
@@ -967,7 +974,7 @@ function teamCard(grp,m,R){const r=R[m.id];const ready=r.a&&r.b&&r.a!=='BYE'&&r.
   const nm2=side=>{const id=r[side];return id?nm(id):ph(side==='a'?m.srcA:m.srcB)};
   const head=side=>{const id=r[side];const tag=(m.po||m.bq)&&grp.data.poTags&&grp.data.poTags[id];
     const cls=[id?'':'tbd',r.done&&!r.bye&&r.w===id?'win':'',r.done&&!r.bye&&r.l===id?'lose':''].join(' ');
-    return`<div class="slot ${cls}"><span class="sd ${tag?'tag':''}">${id&&id!=='BYE'?(tag||SEED[id]):''}</span><span class="nm" title="${esc(nm2(side))}">${esc(nm2(side))}</span>${ready&&!r.bye?`<span class="swon" data-tip="Categories won">${side==='a'?(r.ga||0):(r.gb||0)}</span>`:''}</div>`};
+    return`<div class="slot ${cls}"><span class="sd ${tag?'tag':''}">${id&&id!=='BYE'?(tag||SEED[id]):''}</span><span class="nm" title="${esc(nm2(side))}">${esc(nm2(side))}</span>${ready&&!r.bye?`<span class="swon ${r.draw?'drw':''}" data-tip="Categories won">${side==='a'?(r.ga||0):(r.gb||0)}</span>`:''}</div>`};
   const block=c=>{const o=cs[c]||{},isD=c==='D',CS=SET&&!isD,res=r.sub&&r.sub[c];
     const sl=CS&&Array.isArray(o.sets)?o.sets:[];let n=1;
     if(CS){let wa=0,wb=0,k=0;for(;k<sl.length&&wa<N&&wb<N;k++){if(!setDone(sl[k]))break;if(sl[k][0]>sl[k][1])wa++;else wb++}
@@ -979,7 +986,7 @@ function teamCard(grp,m,R){const r=R[m.id];const ready=r.a&&r.b&&r.a!=='BYE'&&r.
     const w=res?(CS?setsWarn(grp,{s:o}):scoreWarn(grp,res.sa,res.sb)):'';
     return`<div class="tcat ${isD?'dec':''}"><div class="tch"><b>${CAT_NAME[c]}</b>${isD?'<span class="note">Categories split, so one game decides it</span>':''}${w?`<span class="warn">${esc(w)}</span>`:''}</div>${line('a')}${line('b')}</div>`};
   const onCt=m.courtId&&CU[m.courtId]&&CU[m.courtId].m===m;
-  return`<div class="match team ${r.done?'done':''} ${ready&&!r.done?'live':''} ${onCt?'oncourt':''}"><div class="mh"><span>${esc(m.label)}</span>${courtCtl(grp,m,r)}</div>${head('a')}${head('b')}${ready?cats.map(block).join(''):''}</div>`}
+  return`<div class="match team ${r.done?'done':''} ${ready&&!r.done?'live':''} ${onCt?'oncourt':''}"><div class="mh"><span>${esc(m.label)}</span>${r.draw?'<span class="drawtag">Draw</span>':''}${courtCtl(grp,m,r)}</div>${head('a')}${head('b')}${ready?cats.map(block).join(''):''}</div>`}
 function matchCard(grp,m,R){if(teamOn(grp))return teamCard(grp,m,R);const r=R[m.id];const ready=r.a&&r.b&&r.a!=='BYE'&&r.b!=='BYE';
   const sv=(m.s&&m.s.pa===r.a&&m.s.pb===r.b)?m.s:{};
   /* sets: show the sets played so far plus the next one, up to the most a match can need */
@@ -1001,7 +1008,7 @@ function rankTable(grp,key,list,opt={}){
     const bar=`<div class="rtabs" role="tablist">${tabs.map(t=>`<button role="tab" aria-selected="${t===tab}" class="${t===tab?'on':''}" data-act="rtab" data-k="${ek0}" data-v="${t}">${t==='team'?'Team':CAT_NAME[t]}</button>`).join('')}</div>`;
     if(tab!=='team'){const L=tableFor(grp,key,resolve(grp),tab);
       return bar+table(L,Object.assign({},opt,{sets:setsOn(grp),units:'sets',adv:0,complete:false,ent:'Team',catLabel:CAT_NAME[tab]}))+`<div class="rkbar"><span class="note">Teams ranked on their ${CAT_NAME[tab]} games only: wins, then head-to-head, ${setsOn(grp)?'set difference, ':''}+/−, fewest points allowed. Who goes through follows the Team tab.</span></div>`}
-    return bar+rankTable0(grp,key,list,Object.assign({units:'games',ent:'Team'},opt))}
+    return bar+rankTable0(grp,key,list,Object.assign({units:'games',ent:'Team',draws:drawsOn(grp)},opt))}
   return rankTable0(grp,key,list,opt)}
 function rankTable0(grp,key,list,opt={}){opt=Object.assign({sets:setsOn(grp)||teamOn(grp)},opt);const ek=grp.id+':'+key;
   if(ui.rkEdit===ek)return rankEditor(grp,key);
@@ -1017,8 +1024,8 @@ function table(list,opt={}){const adv=opt.adv||0;
   const gp=s=>opt.of?`${s.p}/${typeof opt.of==='function'?opt.of(s):opt.of}`:s.p;
   /* Column headers with a definition on hover (and on keyboard focus) */
   const th=(lab,def)=>`<th><abbr class="hd" data-tip="${esc(def)}" aria-label="${lab}: ${esc(def)}" tabindex="0">${lab}</abbr></th>`;
-  const h=`<tr>${th('#',list.ov?'Rank in this table, as set by the desk.':opt.sets?`Rank in this table: wins first, then the tiebreakers (head-to-head, ${opt.units==='games'?'game':'set'} difference, +/−, fewest points allowed).`:'Rank in this table: wins first, then the tiebreakers (head-to-head, +/−, fewest points allowed).')}${th(opt.ent||'Pair',opt.ent==='Team'?'The team.':'The team of two players.')}${th('GP',opt.of?'Games played, out of the games each pair is scheduled to play.':'Games played so far.')}${th('W',opt.units==='games'?'Wins: team matches won.':opt.catLabel?`Wins: ${opt.catLabel} games won.`:'Wins: matches won.')}${th('L',opt.units==='games'?'Losses: team matches lost.':opt.catLabel?`Losses: ${opt.catLabel} games lost.`:'Losses: matches lost.')}${opt.sets?(opt.units==='games'?th('Games','Category games won – lost, across all team matches (a Decider counts too).')+th('G+/−','Game difference: category games won minus lost. It is the 2nd tiebreaker, after head-to-head.'):th('Sets','Sets won – sets lost, across all matches.')+th('S+/−','Set difference: sets won minus sets lost. It is the 2nd tiebreaker, after head-to-head.')):''}${opt.kc?th('Top ct','Wins on the top court. Each one is worth a bonus point.')+th('Pts','Standings points: 1 per win, plus 1 more for each win on the top court.'):''}${th('PF','Points for: total points this pair has scored.')}${th('PA',opt.sets?'Points against: total points scored against this pair, across all sets. Fewer is better; it is the last tiebreaker.':'Points against: total points scored against this pair. Fewer is better; it is the 3rd tiebreaker.')}${th('+/−',opt.sets?'Point difference: points for minus points against, across all sets. It is the 3rd tiebreaker, after set difference.':'Point difference: points for minus points against. It is the 2nd tiebreaker, after head-to-head.')}${opt.buch?th('Buch','Buchholz: total wins of the opponents this pair has played. Higher means a tougher schedule; it breaks ties in Swiss.'):''}</tr>`;
-  const rows=list.map((s,i)=>`<tr class="${i<adv?'adv':''}"><td class="rk">${i+1}</td><td>${esc(nm(s.id))}${s.tb?`<span class="tbb" data-tip="${TB_TITLE[s.tb]}" tabindex="0">${TB_LABEL[s.tb]}</span>`:''}${s.tieOpen&&opt.complete?'<span class="tbb open" data-tip="Still tied after all tiebreakers. Settle it with Edit order." tabindex="0">Tied</span>':''}</td><td class="gp">${gp(s)}</td><td>${s.w}</td><td>${s.l}</td>${opt.sets?`<td>${s.sw}–${s.sl}</td><td class="${s.sd>0?'pos':s.sd<0?'neg':''}">${s.sd>0?'+':''}${s.sd}</td>`:''}${opt.kc?`<td>${s.kc}</td><td><b>${s.pts}</b></td>`:''}<td>${s.pf}</td><td>${s.pa}</td><td class="${s.diff>0?'pos':s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</td>${opt.buch?`<td>${s.buch}</td>`:''}</tr>`).join('');
+  const h=`<tr>${th('#',list.ov?'Rank in this table, as set by the desk.':opt.sets?`Rank in this table: wins first, then the tiebreakers (head-to-head, ${opt.units==='games'?'game':'set'} difference, +/−, fewest points allowed).`:'Rank in this table: wins first, then the tiebreakers (head-to-head, +/−, fewest points allowed).')}${th(opt.ent||'Pair',opt.ent==='Team'?'The team.':'The team of two players.')}${th('GP',opt.of?'Games played, out of the games each pair is scheduled to play.':'Games played so far.')}${th('W',opt.units==='games'?'Wins: team matches won.':opt.catLabel?`Wins: ${opt.catLabel} games won.`:'Wins: matches won.')}${th('L',opt.units==='games'?'Losses: team matches lost.':opt.catLabel?`Losses: ${opt.catLabel} games lost.`:'Losses: matches lost.')}${opt.draws?th('D','Draws: team matches where the categories were split and no Decider was played. A draw counts as half a win in the ranking.'):''}${opt.sets?(opt.units==='games'?th('Games','Category games won – lost, across all team matches (a Decider counts too).')+th('G+/−','Game difference: category games won minus lost. It is the 2nd tiebreaker, after head-to-head.'):th('Sets','Sets won – sets lost, across all matches.')+th('S+/−','Set difference: sets won minus sets lost. It is the 2nd tiebreaker, after head-to-head.')):''}${opt.kc?th('Top ct','Wins on the top court. Each one is worth a bonus point.')+th('Pts','Standings points: 1 per win, plus 1 more for each win on the top court.'):''}${th('PF','Points for: total points this pair has scored.')}${th('PA',opt.sets?'Points against: total points scored against this pair, across all sets. Fewer is better; it is the last tiebreaker.':'Points against: total points scored against this pair. Fewer is better; it is the 3rd tiebreaker.')}${th('+/−',opt.sets?'Point difference: points for minus points against, across all sets. It is the 3rd tiebreaker, after set difference.':'Point difference: points for minus points against. It is the 2nd tiebreaker, after head-to-head.')}${opt.buch?th('Buch','Buchholz: total wins of the opponents this pair has played. Higher means a tougher schedule; it breaks ties in Swiss.'):''}</tr>`;
+  const rows=list.map((s,i)=>`<tr class="${i<adv?'adv':''}"><td class="rk">${i+1}</td><td>${esc(nm(s.id))}${s.tb?`<span class="tbb" data-tip="${TB_TITLE[s.tb]}" tabindex="0">${TB_LABEL[s.tb]}</span>`:''}${s.tieOpen&&opt.complete?'<span class="tbb open" data-tip="Still tied after all tiebreakers. Settle it with Edit order." tabindex="0">Tied</span>':''}</td><td class="gp">${gp(s)}</td><td>${s.w}</td><td>${s.l}</td>${opt.draws?`<td>${s.d}</td>`:''}${opt.sets?`<td>${s.sw}–${s.sl}</td><td class="${s.sd>0?'pos':s.sd<0?'neg':''}">${s.sd>0?'+':''}${s.sd}</td>`:''}${opt.kc?`<td>${s.kc}</td><td><b>${s.pts}</b></td>`:''}<td>${s.pf}</td><td>${s.pa}</td><td class="${s.diff>0?'pos':s.diff<0?'neg':''}">${s.diff>0?'+':''}${s.diff}</td>${opt.buch?`<td>${s.buch}</td>`:''}</tr>`).join('');
   return`<div class="tw"><table>${h}${rows}</table></div>`}
 function rounds(grp,ms,R,sits){const by={};ms.forEach(m=>(by[m.round]=by[m.round]||[]).push(m));
   return Object.keys(by).map(Number).sort((a,b)=>a-b).map(r=>{const list=by[r],done=list.every(m=>R[m.id].done);const sit=sits&&sits[r-1];
@@ -1062,8 +1069,9 @@ function vSetup(grp){const f=grp.format,o=grp.opts,n=grp.pairs.length,min=FORMAT
     <label class="toggle" style="padding-bottom:8px"><input type="checkbox" id="grp_sets" data-act="setsopt" ${setsOn(grp)?'checked':''}> Enable sets</label>
     ${setsOn(grp)?`<div class="field"><span class="lbl">Race to</span>${stepper('raceTo',raceTo(grp),2,4)}<span class="note" style="font-size:11.5px">First to ${raceTo(grp)} sets · best of ${2*raceTo(grp)-1}</span></div>`:''}</div>
     <div class="row teamrow"><label class="toggle"><input type="checkbox" id="grp_team" data-act="teamopt" ${teamOn(grp)?'checked':''}> Enable team</label>
+    ${teamOn(grp)&&teamCats(grp).length%2===0?`<label class="toggle" style="padding-bottom:8px" data-tip="When the categories are split (e.g. 1–1), play one more game to decide the match. Off: the split is recorded as a draw."><input type="checkbox" id="grp_dec" data-act="decopt" ${grp.opts.noDecider?'':'checked'}> Decider game on a split</label>`:''}
     ${teamOn(grp)?`<div class="field"><span class="lbl">Categories in each team match</span><div class="cats">${['M','W','X'].map(c=>`<label class="toggle catchk"><input type="checkbox" id="cat_${c}" data-act="catopt" data-v="${c}" ${teamCats(grp).includes(c)?'checked':''}> ${CAT_NAME[c]}</label>`).join('')}</div></div>`:''}</div>
-    ${teamOn(grp)?`<p class="note" style="margin:8px 0 0">Each team match has ${teamCats(grp).length===1?'one game':`${teamCats(grp).length} games`}: ${teamCats(grp).map(c=>CAT_NAME[c]).join(', ')}. The team that wins more of them wins the match.${teamCats(grp).length%2===0?' If they split, one Decider game settles it.':''} Standings have a Team tab (team wins) and a tab for each category.</p>`:''}
+    ${teamOn(grp)?`<p class="note" style="margin:8px 0 0">Each team match has ${teamCats(grp).length===1?'one game':`${teamCats(grp).length} games`}: ${teamCats(grp).map(c=>CAT_NAME[c]).join(', ')}. The team that wins more of them wins the match.${teamCats(grp).length%2===0?(grp.opts.noDecider?' If they split, the match is recorded as a draw (half a win each in the ranking): each team keeps the category it won, plus its points. Knockout, King/Queen and Ladder matches still need a winner, so they play a Decider.':' If they split, one Decider game settles it.'):''} Standings have a Team tab (team wins) and a tab for each category.</p>`:''}
     ${setsOn(grp)?`<p class="note" style="margin:8px 0 0">${hiWins(grp)?'In each set the higher score wins.':`Each set is played to ${grp.gameTo}${grp.winBy?', win by 2':''}.`} A match counts as one win in the standings. Ties are broken by head-to-head, then set difference, then point difference, then fewest points allowed.</p>`:''}</section>
   <section class="sec"><h3>Mode of play</h3><div class="fmts">${Object.entries(FORMATS).map(([k,v])=>`<button class="fmt ${f===k?'on':''}" data-act="format" data-v="${k}" aria-pressed="${f===k}"><b>${v.name}</b><span>${v.blurb}</span></button>`).join('')}</div>
     <div class="row" style="margin-top:14px">${opts}</div></section>
@@ -1452,7 +1460,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(
       const ok=()=>{if(msg)msg.textContent='Copied.'};const fb=()=>{ta.focus();ta.select();if(msg)msg.textContent='Selected. Press Ctrl+C or ⌘C to copy.'};
       try{navigator.clipboard.writeText(ta.value).then(ok,fb)}catch(err){fb()}return}
     case'restore':{const v=document.getElementById('bk_in').value.trim();try{const d=JSON.parse(v);if(!d||!(Array.isArray(d.groups)||Array.isArray(d.brackets)))throw 0;S=migrate(d);if(!S.groups.length)throw 0;S.active=S.active||S.groups[0].id;ui.backup=false}catch(err){ui.restoreErr='That text is not a valid backup. Copy the whole backup and paste it again.'}break}
-    case'hiwins':case'gfreset':case'winby':case'rrpo':case'bronze':case'podium':case'setsopt':case'teamopt':case'catopt':return;
+    case'decopt':case'hiwins':case'gfreset':case'winby':case'rrpo':case'bronze':case'podium':case'setsopt':case'teamopt':case'catopt':return;
     case'rtab':ui.rtab=ui.rtab||{};ui.rtab[t.dataset.k]=t.dataset.v;render();return;
   }
   commit()});
@@ -1471,6 +1479,7 @@ document.addEventListener('input',e=>{const t=e.target,act=t.dataset&&t.dataset.
 document.addEventListener('change',e=>{const t=e.target,act=t.dataset&&t.dataset.act;if(!act)return;const grp=cur();
   if(act==='evdate'){S.date=t.value;save();return}
   if(act==='winby'){grp.winBy=t.checked;commit();return}
+  if(act==='decopt'){grp.opts.noDecider=!t.checked;commit();return}
   if(act==='hiwins'){grp.opts.hiWins=t.checked;commit();return}
   if(act==='teamopt'){grp.opts.team=t.checked;if(t.checked&&!(grp.opts.cats||[]).length)grp.opts.cats=['M','W'];
     grp.pairs.forEach((p,i)=>{if(t.checked&&p.name===`Pair ${i+1}`)p.name=`Team ${i+1}`;if(!t.checked&&p.name===`Team ${i+1}`)p.name=`Pair ${i+1}`});commit();return}
